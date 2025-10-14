@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AdminProvider } from "./contexts/AdminContext";
+import Navbar from "./components/Navbar";
 import Index from "./pages/Index";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
@@ -9,20 +10,24 @@ import Contact from "./pages/Contact";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import Leaderboard from "./pages/Leaderboard";
+import DatabaseTest from "./pages/DatabaseTest";
+import DatabasePermissionsTest from "./pages/DatabasePermissionsTest";
 
 const App = () => (
   <AuthProvider>
     <AdminProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/" element={<><Navbar /><Index /></>} />
+          <Route path="/register" element={<><Navbar /><Register /></>} />
+          <Route path="/login" element={<><Navbar /><Login /></>} />
+          <Route path="/profile" element={<><Navbar /><Profile /></>} />
+          <Route path="/contact" element={<><Navbar /><Contact /></>} />
+          <Route path="/leaderboard" element={<><Navbar /><Leaderboard /></>} />
           <Route path="/admin" element={<AdminLogin />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/dashboard" element={<><Navbar /><AdminDashboard /></>} />
+          <Route path="/database-test" element={<><Navbar /><DatabaseTest /></>} />
+          <Route path="/database-permissions-test" element={<><Navbar /><DatabasePermissionsTest /></>} />
         </Routes>
       </BrowserRouter>
     </AdminProvider>

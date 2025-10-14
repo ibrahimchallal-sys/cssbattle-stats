@@ -3,7 +3,9 @@ create table if not exists players (
   id uuid primary key default gen_random_uuid(),
   full_name text not null,
   email text not null unique,
+  phone_number text,
   cssbattle_profile_link text,
+  "group" text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );

@@ -2,24 +2,31 @@ import { Card } from "@/components/ui/card";
 import FloatingShape from "@/components/FloatingShape";
 import CodeBlock from "@/components/CodeBlock";
 import Navbar from "@/components/Navbar";
-import { Code2, Trophy, Users, Zap } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Code2, Trophy, Users, Zap, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/contexts/AdminContext";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
+  const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const [playerCount, setPlayerCount] = useState<number | null>(null);
+  const [daysLeftInMonth, setDaysLeftInMonth] = useState<number>(0);
+  
   const codeExample = [
     ".battle {",
     "  display: flex;",
     "  background: linear-gradient(135deg, #A020F0, #E796E7);",
     "  transform: scale(1.1);",
-    "}",
+    "}"
   ];
 
   useEffect(() => {
     // Simple timeout to ensure the DOM is fully loaded
     const timer = setTimeout(() => {
       fetchPlayerCount();
+      calculateDaysLeftInMonth();
     }, 100);
     
     return () => clearTimeout(timer);
@@ -39,6 +46,13 @@ const Index = () => {
     } catch (error) {
       setPlayerCount(1000); // Default fallback value
     }
+  };
+
+  const calculateDaysLeftInMonth = () => {
+    const now = new Date();
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const daysLeft = endOfMonth.getDate() - now.getDate() + 1;
+    setDaysLeftInMonth(daysLeft);
   };
 
   return (
@@ -103,17 +117,30 @@ const Index = () => {
             <p className="text-foreground/70">Unique CSS battles</p>
           </Card>
         </div>
+
+        {/* Daily Challenge Card */}
+        <Card className="mt-6 bg-card/50 backdrop-blur-sm border-battle-purple/30 p-6 md:p-8 hover:scale-105 transition-transform hover:shadow-glow">
+          <div className="flex flex-col items-center text-center">
+            <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-primary rounded-lg flex items-center justify-center mb-4 shadow-glow">
+              <Trophy className="w-6 h-6 md:w-8 md:h-8 text-foreground" />
+            </div>
+            <h3 className="text-xl md:text-2xl font-bold mb-2 text-foreground">Daily Challenge</h3>
+            <p className="text-foreground/70 mb-4">Test your skills with today's CSS battle</p>
+            <a 
+              href="https://cssbattle.dev/daily" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center bg-gradient-primary text-foreground px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform shadow-glow"
+            >
+              Take on the Daily Challenge
+            </a>
+          </div>
+        </Card>
       </section>
 
       {/* Event Details */}
       <section className="relative z-10 container mx-auto px-4 pb-12 md:pb-20">
         <Card className="bg-gradient-primary p-8 md:p-12 text-center shadow-glow max-w-4xl mx-auto">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6 text-foreground">
-            March 15-17, 2025
-          </h2>
-          <p className="text-lg md:text-xl text-foreground/90 mb-6 md:mb-8">
-            Three days of intense CSS coding competition
-          </p>
           <div className="flex flex-wrap gap-4 justify-center text-sm md:text-base">
             <div className="bg-background/20 backdrop-blur-sm px-4 md:px-6 py-2 md:py-3 rounded-lg">
               <span className="text-foreground/80">Online Event</span>
@@ -125,6 +152,17 @@ const Index = () => {
               <span className="text-foreground/80">Live Leaderboard</span>
             </div>
           </div>
+          
+          {/* Monthly Counter Card */}
+          <Card className="mt-8 bg-background/30 backdrop-blur-sm border-foreground/20 p-6">
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <Calendar className="w-5 h-5 text-foreground" />
+              <h3 className="text-lg md:text-xl font-bold text-foreground">Days Left This Month</h3>
+            </div>
+            <p className="text-2xl md:text-3xl font-bold text-battle-accent">
+              {daysLeftInMonth}
+            </p>
+          </Card>
         </Card>
       </section>
     </main>

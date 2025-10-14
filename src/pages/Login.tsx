@@ -40,7 +40,9 @@ const Login = () => {
     setShowEmailVerificationMessage(false);
     
     try {
+      console.log("Login - Attempting login with:", formData.email);
       const result = await login(formData.email, formData.password);
+      console.log("Login - Result:", result);
       
       if (result.success) {
         console.log("Login successful!");
@@ -54,6 +56,7 @@ const Login = () => {
         }
       }
     } catch (err) {
+      console.error("Login - Unexpected error:", err);
       setError("An unexpected error occurred");
     } finally {
       setIsSubmitting(false);

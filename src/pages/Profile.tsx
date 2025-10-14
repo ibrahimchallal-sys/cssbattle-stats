@@ -7,8 +7,9 @@ import { useAdmin } from "@/contexts/AdminContext";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { User as UserIcon, Mail, Link, ArrowLeft, Save, User, Users, Shield } from "lucide-react";
+import { User as UserIcon, Mail, Link, ArrowLeft, Save, User, Users, Shield, Phone } from "lucide-react";
 import { GROUP_OPTIONS } from "@/constants/groups";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -17,7 +18,9 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     fullName: user?.full_name || "",
-    cssBattleProfileLink: user?.cssbattle_profile_link || ""
+    cssBattleProfileLink: user?.cssbattle_profile_link || "",
+    phoneNumber: user?.phone_number || "",
+    group: user?.group || ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +39,13 @@ const Profile = () => {
     }));
   };
 
+  const handleGroupChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      group: value
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -43,23 +53,78 @@ const Profile = () => {
     setSuccess(null);
     
     try {
-      // Update user data in players table
-      const { error: updateError } = await supabase
+      console.log("Profile - User object:", user);
+      console.log("Profile - User ID:", user?.id);
+      
+      if (!user?.id) {
+        throw new Error("User ID is missing. Please log out and log back in.");
+      }
+      
+      // Instead of using single(), let's use a more flexible approach
+      const { data: userData, error: userError } = await supabase
+        .from('players')
+        .select('id, full_name, email, group')
+        .eq('id', user.id);
+      
+      console.log("Profile - User fetch result:", userData);
+      console.log("Profile - User fetch error:", userError);
+      
+      if (userError) {
+        throw new Error(`Database error: ${userError.message}`);
+      }
+      
+      if (!userData || userData.length === 0) {
+        throw new Error(`User not found in database with ID: ${user.id}. This might indicate the user record doesn't exist in the players table.`);
+      }
+      
+      if (userData.length > 1) {
+        console.warn("Profile - Multiple users found with same ID:", userData);
+      }
+      
+      const userRecord = userData[0];
+      console.log("Profile - Working with user record:", userRecord);
+      
+      // Try the update
+      const { data: updateData, error: updateError } = await supabase
         .from('players')
         .update({
           full_name: formData.fullName,
-          cssbattle_profile_link: formData.cssBattleProfileLink || null
+          cssbattle_profile_link: formData.cssBattleProfileLink || null,
+          phone_number: formData.phoneNumber || null,
+          group: formData.group || null
         })
-        .eq('id', user?.id);
+        .eq('id', user.id);
+      
+      console.log("Profile - Update result:", updateData);
+      console.log("Profile - Update error:", updateError);
       
       if (updateError) {
-        throw new Error(updateError.message);
+        // Log detailed error information
+        console.error("Profile - Detailed update error:", {
+          message: updateError.message,
+          code: updateError.code,
+          details: updateError.details,
+          hint: updateError.hint
+        });
+        
+        // Check if it's a permission error
+        if (updateError.code === "42501") {
+          throw new Error("Permission denied. You may not have the required permissions to update this record.");
+        }
+        
+        throw new Error(`Update failed: ${updateError.message}`);
+      }
+      
+      // Check if any rows were affected
+      if (updateData === null) {
+        console.log("Profile - Update completed but no data returned. This is normal for update operations without select().");
       }
       
       setSuccess("Profile updated successfully!");
       setIsEditing(false);
     } catch (err) {
-      setError("Failed to update profile. Please try again.");
+      console.error("Profile - Update error:", err);
+      setError(`Failed to update profile: ${(err as Error).message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -90,6 +155,10 @@ const Profile = () => {
       </div>
     );
   }
+
+  // Debug: Log user object
+  console.log("Profile - User object:", user);
+  console.log("Profile - User ID:", user?.id);
 
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6">
@@ -171,13 +240,56 @@ const Profile = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="group" className="text-sm font-medium text-foreground/70">Player Group</Label>
-              <div className="p-3 bg-background/50 border border-battle-purple/30 rounded-md">
-                <div className="flex items-center">
-                  <Users className="w-4 h-4 mr-2 text-muted-foreground" />
-                  {user.group ? GROUP_OPTIONS.find(option => option.value === user.group)?.label || user.group : 'No group assigned'}
+              <Label htmlFor="phoneNumber" className="text-sm font-medium text-foreground/70">Phone Number</Label>
+              {isEditing ? (
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                  <Input
+                    id="phoneNumber"
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
+                    onChange={handleInputChange}
+                    placeholder="Enter your phone number"
+                    className="pl-10 bg-background/50 border-battle-purple/30"
+                  />
                 </div>
-              </div>
+              ) : (
+                <div className="p-3 bg-background/50 border border-battle-purple/30 rounded-md">
+                  {user.phone_number ? (
+                    <div className="flex items-center">
+                      <Phone className="w-4 h-4 mr-2 text-muted-foreground" />
+                      {user.phone_number}
+                    </div>
+                  ) : (
+                    <span className="text-foreground/50">Not provided</span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="group" className="text-sm font-medium text-foreground/70">Player Group</Label>
+              {isEditing ? (
+                <Select value={formData.group} onValueChange={handleGroupChange}>
+                  <SelectTrigger className="bg-background/50 border-battle-purple/30">
+                    <SelectValue placeholder="Select your group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GROUP_OPTIONS.map((group) => (
+                      <SelectItem key={group.value} value={group.value}>
+                        {group.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="p-3 bg-background/50 border border-battle-purple/30 rounded-md">
+                  <div className="flex items-center">
+                    <Users className="w-4 h-4 mr-2 text-muted-foreground" />
+                    {user.group ? GROUP_OPTIONS.find(option => option.value === user.group)?.label || user.group : 'No group assigned'}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -225,7 +337,9 @@ const Profile = () => {
                       setIsEditing(false);
                       setFormData({
                         fullName: user.full_name || "",
-                        cssBattleProfileLink: user.cssbattle_profile_link || ""
+                        cssBattleProfileLink: user.cssbattle_profile_link || "",
+                        phoneNumber: user.phone_number || "",
+                        group: user.group || ""
                       });
                       setError(null);
                       setSuccess(null);

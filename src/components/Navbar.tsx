@@ -13,6 +13,16 @@ const Navbar = () => {
   const { user } = useAuth();
   const { admin, isAdmin } = useAdmin();
 
+  // Debug: Log authentication states
+  useEffect(() => {
+    console.log("Navbar - Auth states:", { user, admin, isAdmin });
+    console.log("Navbar - User details:", user ? {
+      id: user.id,
+      email: user.email,
+      full_name: user.full_name
+    } : "No user");
+  }, [user, admin, isAdmin]);
+
   // Check for saved theme preference
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -136,7 +146,12 @@ const Navbar = () => {
               {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
             <div className="flex items-center space-x-2">
-              {isAdmin && (
+              {/* Debug: Show auth states */}
+              <div className="hidden text-xs text-foreground/50">
+                User: {user ? "Yes" : "No"} | Admin: {isAdmin ? "Yes" : "No"}
+              </div>
+              
+              {isAdmin && location.pathname !== "/admin/dashboard" && (
                 <Button
                   onClick={() => navigate("/admin/dashboard")}
                   variant="outline"
@@ -217,7 +232,7 @@ const Navbar = () => {
                       </div>
                       <span className="text-foreground">{user.full_name}</span>
                     </div>
-                    {isAdmin && (
+                    {isAdmin && location.pathname !== "/admin/dashboard" && (
                       <Button
                         onClick={() => {
                           navigate("/admin/dashboard");
@@ -255,17 +270,19 @@ const Navbar = () => {
                     >
                       Login as Player
                     </Button>
-                    <Button
-                      onClick={() => {
-                        navigate("/admin/dashboard");
-                        setIsMenuOpen(false);
-                      }}
-                      variant="outline"
-                      size="sm"
-                      className="w-full border-battle-purple/50 hover:bg-battle-purple/10"
-                    >
-                      Admin Dashboard
-                    </Button>
+                    {location.pathname !== "/admin/dashboard" && (
+                      <Button
+                        onClick={() => {
+                          navigate("/admin/dashboard");
+                          setIsMenuOpen(false);
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-battle-purple/50 hover:bg-battle-purple/10"
+                      >
+                        Admin Dashboard
+                      </Button>
+                    )}
                     <Button
                       onClick={() => {
                         toggleTheme();
