@@ -21,10 +21,12 @@ import {
   Mail, 
   Save, 
   X, 
-  Edit 
+  Edit,
+  Shield
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { GROUP_OPTIONS } from "@/constants/groups";
+import { useAdmin } from "@/contexts/AdminContext";
 
 interface Player {
   id: string;
@@ -38,6 +40,7 @@ interface Player {
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { logout: adminLogout } = useAdmin();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +96,7 @@ const AdminDashboard = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("adminSession");
+    adminLogout(); // Use the context logout function
     navigate("/admin");
   };
 
@@ -180,8 +183,9 @@ const AdminDashboard = () => {
               CSS <span className="bg-gradient-primary bg-clip-text text-transparent">BATTLE</span> Admin Dashboard
             </h1>
             {adminEmail && (
-              <p className="text-sm text-foreground/70 mt-1">
-                Logged in as: <span className="text-battle-purple font-medium">{adminEmail}</span>
+              <p className="text-sm text-foreground/70 mt-1 flex items-center justify-center">
+                <Shield className="w-4 h-4 mr-1 text-battle-accent" />
+                Logged in as: <span className="text-battle-purple font-medium ml-1">{adminEmail}</span>
               </p>
             )}
           </div>
@@ -211,7 +215,7 @@ const AdminDashboard = () => {
 
           <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-battle-yellow rounded-lg flex items-center justify-center mr-4">
+              <div className="w-12 h-12 bg-battle-accent rounded-lg flex items-center justify-center mr-4">
                 <Link className="w-6 h-6 text-white" />
               </div>
               <div>

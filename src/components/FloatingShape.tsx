@@ -11,7 +11,7 @@ const FloatingShape = ({ color, size, top, left, delay = 0, rotation = false }: 
   const colorClasses = {
     purple: "bg-battle-purple shadow-glow",
     pink: "bg-battle-pink shadow-glow-pink",
-    yellow: "bg-battle-yellow shadow-glow-yellow",
+    yellow: "bg-battle-accent shadow-glow-accent",
   };
 
   return (

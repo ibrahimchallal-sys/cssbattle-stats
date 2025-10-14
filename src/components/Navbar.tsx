@@ -1,14 +1,44 @@
 import { Button } from "@/components/ui/button";
-import { Menu, X, User as UserIcon } from "lucide-react";
-import { useState } from "react";
+import { Menu, X, User as UserIcon, Sun, Moon } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/contexts/AdminContext";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { admin, isAdmin } = useAdmin();
+
+  // Check for saved theme preference
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+      setIsDarkMode(false);
+      document.documentElement.classList.remove('dark');
+    } else {
+      setIsDarkMode(true);
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    
+    if (newTheme) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+      localStorage.setItem('theme', 'light');
+    }
+  };
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -44,6 +74,14 @@ const Navbar = () => {
 
             {/* Mobile menu button */}
             <div className="flex items-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                className="text-foreground hover:bg-battle-purple/10 mr-2"
+              >
+                {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -89,30 +127,60 @@ const Navbar = () => {
 
           {/* Auth Buttons - Desktop */}
           <div className="flex items-center space-x-4">
-            {user ? (
-              <div 
-                className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
-                onClick={() => navigate("/profile")}
-              >
-                <UserIcon className="w-5 h-5 text-foreground" />
-              </div>
-            ) : (
-              <>
-                <Button 
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="text-foreground hover:bg-battle-purple/10"
+            >
+              {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
+            <div className="flex items-center space-x-2">
+              {isAdmin && (
+                <Button
+                  onClick={() => navigate("/admin/dashboard")}
                   variant="outline"
+                  size="sm"
+                  className="border-battle-purple/50 hover:bg-battle-purple/10 text-xs"
+                >
+                  Admin Dashboard
+                </Button>
+              )}
+              {isAdmin && !user && (
+                <Button
                   onClick={() => navigate("/login")}
-                  className="border-battle-purple/50 hover:bg-battle-purple/10"
+                  variant="outline"
+                  size="sm"
+                  className="border-battle-purple/50 hover:bg-battle-purple/10 text-xs"
                 >
-                  Log in
+                  Login as Player
                 </Button>
-                <Button 
-                  onClick={() => navigate("/register")}
-                  className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
+              )}
+              {user ? (
+                <div 
+                  className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
+                  onClick={() => navigate("/profile")}
                 >
-                  S'inscrire
-                </Button>
-              </>
-            )}
+                  <UserIcon className="w-5 h-5 text-foreground" />
+                </div>
+              ) : !isAdmin && (
+                <>
+                  <Button 
+                    variant="outline"
+                    onClick={() => navigate("/login")}
+                    className="border-battle-purple/50 hover:bg-battle-purple/10"
+                  >
+                    Log in
+                  </Button>
+                  <Button 
+                    onClick={() => window.open("https://css-battle-isfo.vercel.app/", "_blank")}
+                    className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
+                  >
+                    S'inscrire
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -136,18 +204,80 @@ const Navbar = () => {
               ))}
               <div className="flex flex-col space-y-2 pt-4">
                 {user ? (
-                  <div 
-                    className="flex items-center space-x-2 cursor-pointer"
-                    onClick={() => {
-                      navigate("/profile");
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center">
-                      <UserIcon className="w-4 h-4 text-foreground" />
+                  <>
+                    <div 
+                      className="flex items-center space-x-2 cursor-pointer"
+                      onClick={() => {
+                        navigate("/profile");
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center">
+                        <UserIcon className="w-4 h-4 text-foreground" />
+                      </div>
+                      <span className="text-foreground">{user.full_name}</span>
                     </div>
-                    <span className="text-foreground">{user.full_name}</span>
-                  </div>
+                    {isAdmin && (
+                      <Button
+                        onClick={() => {
+                          navigate("/admin/dashboard");
+                          setIsMenuOpen(false);
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-battle-purple/50 hover:bg-battle-purple/10"
+                      >
+                        Admin Dashboard
+                      </Button>
+                    )}
+                    <Button
+                      onClick={() => {
+                        toggleTheme();
+                        setIsMenuOpen(false);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-battle-purple/50 hover:bg-battle-purple/10"
+                    >
+                      {isDarkMode ? "Light Mode" : "Dark Mode"}
+                    </Button>
+                  </>
+                ) : isAdmin ? (
+                  <>
+                    <Button
+                      onClick={() => {
+                        navigate("/login");
+                        setIsMenuOpen(false);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-battle-purple/50 hover:bg-battle-purple/10"
+                    >
+                      Login as Player
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        navigate("/admin/dashboard");
+                        setIsMenuOpen(false);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-battle-purple/50 hover:bg-battle-purple/10"
+                    >
+                      Admin Dashboard
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        toggleTheme();
+                        setIsMenuOpen(false);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-battle-purple/50 hover:bg-battle-purple/10"
+                    >
+                      {isDarkMode ? "Light Mode" : "Dark Mode"}
+                    </Button>
+                  </>
                 ) : (
                   <>
                     <Button 
@@ -162,7 +292,7 @@ const Navbar = () => {
                     </Button>
                     <Button 
                       onClick={() => {
-                        navigate("/register");
+                        window.open("https://css-battle-isfo.vercel.app/", "_blank");
                         setIsMenuOpen(false);
                       }}
                       className="w-full bg-gradient-primary hover:scale-105 transition-transform shadow-glow"

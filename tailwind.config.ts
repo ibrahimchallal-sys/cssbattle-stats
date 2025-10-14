@@ -52,6 +52,7 @@ export default {
           pink: "hsl(var(--battle-pink))",
           yellow: "hsl(var(--battle-yellow))",
           black: "hsl(var(--battle-black))",
+          blue: "hsl(var(--battle-blue))",
         },
       },
       borderRadius: {

@@ -3,15 +3,17 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/contexts/AdminContext";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { User as UserIcon, Mail, Link, ArrowLeft, Save, User, Users } from "lucide-react";
+import { User as UserIcon, Mail, Link, ArrowLeft, Save, User, Users, Shield } from "lucide-react";
 import { GROUP_OPTIONS } from "@/constants/groups";
 
 const Profile = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { isAdmin } = useAdmin();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     fullName: user?.full_name || "",
@@ -114,6 +116,12 @@ const Profile = () => {
             </div>
             <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Your Profile</h2>
             <p className="text-foreground/80">Manage your account information</p>
+            {isAdmin && (
+              <div className="mt-2 flex items-center justify-center">
+                <Shield className="w-4 h-4 mr-1 text-battle-accent" />
+                <span className="text-sm text-battle-accent font-medium">Admin User</span>
+              </div>
+            )}
           </div>
           
           {error && (
@@ -250,6 +258,17 @@ const Profile = () => {
                   >
                     Edit Profile
                   </Button>
+                  {isAdmin && (
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      onClick={() => navigate("/admin/dashboard")}
+                      className="flex-1 border-battle-purple/50 hover:bg-battle-purple/10"
+                    >
+                      <Shield className="w-4 h-4 mr-2" />
+                      Admin Dashboard
+                    </Button>
+                  )}
                   <Button 
                     type="button"
                     variant="outline"

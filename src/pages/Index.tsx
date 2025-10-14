@@ -65,7 +65,7 @@ const Index = () => {
             <span className="block bg-gradient-primary bg-clip-text text-transparent">
               BATTLE
             </span>
-            <span className="block text-battle-yellow">CHAMPIONSHIP</span>
+            <span className="block text-battle-accent">CHAMPIONSHIP</span>
           </h1>
 
           {/* Subtitle */}
@@ -94,12 +94,12 @@ const Index = () => {
             <p className="text-foreground/70">Developers competing</p>
           </Card>
 
-          <Card className="bg-card/50 backdrop-blur-sm border-battle-yellow/30 p-6 md:p-8 hover:scale-105 transition-transform hover:shadow-glow-yellow">
-            <div className="w-12 h-12 md:w-16 md:h-16 bg-battle-yellow rounded-lg flex items-center justify-center mb-4 shadow-glow-yellow">
+          <Card className="bg-card/50 backdrop-blur-sm border-battle-accent/30 p-6 md:p-8 hover:scale-105 transition-transform hover:shadow-glow-accent">
+            <div className="w-12 h-12 md:w-16 md:h-16 bg-battle-accent rounded-lg flex items-center justify-center mb-4 shadow-glow-accent">
               <Code2 className="w-6 h-6 md:w-8 md:h-8 text-background" />
             </div>
             <h3 className="text-xl md:text-2xl font-bold mb-2 text-foreground">Challenges</h3>
-            <p className="text-2xl md:text-3xl font-bold text-battle-yellow mb-2">50+</p>
+            <p className="text-2xl md:text-3xl font-bold text-battle-accent mb-2">50+</p>
             <p className="text-foreground/70">Unique CSS battles</p>
           </Card>
         </div>
