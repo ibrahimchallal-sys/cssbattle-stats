@@ -25,7 +25,8 @@ import {
   Shield,
   Plus,
   Trash2,
-  Phone
+  Phone,
+  Key
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { GROUP_OPTIONS } from "@/constants/groups";
@@ -80,6 +81,19 @@ const AdminDashboard = () => {
     phone_number: ""
   });
   const [isCreating, setIsCreating] = useState(false);
+
+  // State for password change modal
+  const [passwordModal, setPasswordModal] = useState<{
+    isOpen: boolean;
+    player: Player | null;
+    userId: string | null;
+  }>({
+    isOpen: false,
+    player: null,
+    userId: null
+  });
+  const [newPassword, setNewPassword] = useState("");
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   useEffect(() => {
     // Check admin session
@@ -482,6 +496,62 @@ const AdminDashboard = () => {
     setCreateForm({ ...createForm, password });
   };
 
+  const handleChangePassword = (player: Player, userId: string) => {
+    setPasswordModal({
+      isOpen: true,
+      player: player,
+      userId: userId
+    });
+    setNewPassword("");
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    if (!passwordModal.userId) {
+      setError("User ID not found");
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    setError(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        setError("You must be logged in to perform this action");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('admin-manage-password', {
+        body: {
+          action: 'update_password',
+          userId: passwordModal.userId,
+          newPassword: newPassword
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setSuccess("Password updated successfully!");
+      setPasswordModal({ isOpen: false, player: null, userId: null });
+      setNewPassword("");
+      
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      console.error("Password update error:", err);
+      setError(`Failed to update password: ${(err as Error).message}`);
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
   const analyzeRLSPolicies = async () => {
     console.log("ANALYZING RLS POLICIES");
     
@@ -837,14 +907,24 @@ const AdminDashboard = () => {
         {/* Create Player Modal */}
         {isCreateModalOpen && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+...
+          </div>
+        )}
+
+        {/* Password Change Modal */}
+        {passwordModal.isOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <Card className="bg-card/90 backdrop-blur-sm border-battle-purple/30 w-full max-w-md">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-foreground">Create Player Account</h3>
+                  <h3 className="text-xl font-bold text-foreground">Change Password</h3>
                   <Button 
                     variant="ghost" 
                     size="icon"
-                    onClick={() => setIsCreateModalOpen(false)}
+                    onClick={() => {
+                      setPasswordModal({ isOpen: false, player: null, userId: null });
+                      setNewPassword("");
+                    }}
                     className="text-foreground hover:bg-battle-purple/10"
                   >
                     <X className="w-4 h-4" />
@@ -858,92 +938,42 @@ const AdminDashboard = () => {
                 )}
                 
                 <div className="space-y-4">
+                  <div className="p-4 bg-background/50 rounded-lg border border-battle-purple/30">
+                    <p className="text-sm text-foreground/70 mb-1">Player</p>
+                    <p className="font-semibold text-foreground">{passwordModal.player?.full_name}</p>
+                    <p className="text-sm text-foreground/70">{passwordModal.player?.email}</p>
+                  </div>
+                  
                   <div className="space-y-2">
-                    <Label htmlFor="full_name" className="text-foreground">Full Name *</Label>
+                    <Label htmlFor="new_password" className="text-foreground">New Password *</Label>
                     <Input
-                      id="full_name"
-                      value={createForm.full_name}
-                      onChange={(e) => setCreateForm({...createForm, full_name: e.target.value})}
-                      placeholder="Enter full name"
+                      id="new_password"
+                      type="text"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password (min 6 characters)"
                       className="bg-background/50 border-battle-purple/30"
                     />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-foreground">Email *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={createForm.email}
-                      onChange={(e) => setCreateForm({...createForm, email: e.target.value})}
-                      placeholder="Enter email"
-                      className="bg-background/50 border-battle-purple/30"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="phone_number" className="text-foreground">Phone Number</Label>
-                    <Input
-                      id="phone_number"
-                      value={createForm.phone_number}
-                      onChange={(e) => setCreateForm({...createForm, phone_number: e.target.value})}
-                      placeholder="Enter phone number"
-                      className="bg-background/50 border-battle-purple/30"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="group" className="text-foreground">Group *</Label>
-                    <Select value={createForm.group} onValueChange={(value) => setCreateForm({...createForm, group: value})}>
-                      <SelectTrigger className="bg-background/50 border-battle-purple/30">
-                        <SelectValue placeholder="Select group" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {GROUP_OPTIONS.map((group) => (
-                          <SelectItem key={group.value} value={group.value}>
-                            {group.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-foreground">Password *</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="password"
-                        type="text"
-                        value={createForm.password}
-                        onChange={(e) => setCreateForm({...createForm, password: e.target.value})}
-                        placeholder="Enter password"
-                        className="bg-background/50 border-battle-purple/30 flex-1"
-                      />
-                      <Button 
-                        onClick={generateRandomPassword}
-                        variant="outline"
-                        className="border-battle-purple/50 hover:bg-battle-purple/10"
-                      >
-                        Generate
-                      </Button>
-                    </div>
                   </div>
                   
                   <div className="flex gap-3 pt-4">
                     <Button 
-                      onClick={() => setIsCreateModalOpen(false)}
+                      onClick={() => {
+                        setPasswordModal({ isOpen: false, player: null, userId: null });
+                        setNewPassword("");
+                      }}
                       variant="outline"
                       className="flex-1 border-battle-purple/50 hover:bg-battle-purple/10"
-                      disabled={isCreating}
+                      disabled={isUpdatingPassword}
                     >
                       Cancel
                     </Button>
                     <Button 
-                      onClick={handleCreatePlayer}
+                      onClick={handleUpdatePassword}
                       className="flex-1 bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
-                      disabled={isCreating}
+                      disabled={isUpdatingPassword}
                     >
-                      {isCreating ? "Creating..." : "Create Account"}
+                      {isUpdatingPassword ? "Updating..." : "Update Password"}
                     </Button>
                   </div>
                 </div>
@@ -1187,6 +1217,15 @@ const AdminDashboard = () => {
                           >
                             <Edit className="w-4 h-4 mr-1" />
                             Edit
+                          </Button>
+                          <Button
+                            onClick={() => handleChangePassword(player, player.id)}
+                            size="sm"
+                            variant="outline"
+                            className="border-yellow-500/50 hover:bg-yellow-500/10"
+                          >
+                            <Key className="w-4 h-4 mr-1" />
+                            Password
                           </Button>
                           <Button
                             onClick={() => {
