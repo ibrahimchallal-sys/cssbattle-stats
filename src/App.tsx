@@ -12,6 +12,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import Leaderboard from "./pages/Leaderboard";
 import DatabaseTest from "./pages/DatabaseTest";
 import DatabasePermissionsTest from "./pages/DatabasePermissionsTest";
+import PasswordReset from "./pages/PasswordReset";
 
 const App = () => (
   <AuthProvider>
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/admin/dashboard" element={<><Navbar /><AdminDashboard /></>} />
           <Route path="/database-test" element={<><Navbar /><DatabaseTest /></>} />
           <Route path="/database-permissions-test" element={<><Navbar /><DatabasePermissionsTest /></>} />
+          <Route path="/reset-password" element={<PasswordReset />} />
         </Routes>
       </BrowserRouter>
     </AdminProvider>

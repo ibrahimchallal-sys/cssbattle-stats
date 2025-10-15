@@ -24,6 +24,8 @@ export type Database = {
           id: string
           phone_number: string | null
           updated_at: string
+          score: number   
+          last_score_update: string | null
         }
         Insert: {
           created_at?: string
@@ -34,6 +36,8 @@ export type Database = {
           id?: string
           phone_number?: string | null
           updated_at?: string
+          score?: number
+          last_score_update?: string | null
         }
         Update: {
           created_at?: string
@@ -44,6 +48,8 @@ export type Database = {
           id?: string
           phone_number?: string | null
           updated_at?: string
+          score?: number
+          last_score_update?: string | null
         }
         Relationships: []
       }

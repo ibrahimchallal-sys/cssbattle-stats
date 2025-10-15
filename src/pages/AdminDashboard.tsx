@@ -25,7 +25,8 @@ import {
   Shield,
   Plus,
   Trash2,
-  Phone
+  Phone,
+  Key
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { GROUP_OPTIONS } from "@/constants/groups";
@@ -165,6 +166,32 @@ const AdminDashboard = () => {
     });
   };
 
+  const handleSendPasswordReset = async (player: Player) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Send password reset email using Supabase
+      const { error } = await supabase.auth.resetPasswordForEmail(player.email, {
+        redirectTo: `http://localhost:8080/reset-password`
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      setSuccess(`Password reset email sent to ${player.email} successfully! The user can now reset their password.`);
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err) {
+      setError("Failed to send password reset email: " + (err as Error).message);
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSavePlayer = async (playerId: string) => {
     try {
       console.log("AdminDashboard - Updating player with ID:", playerId);
@@ -255,7 +282,7 @@ const AdminDashboard = () => {
           data: {
             full_name: createForm.full_name
           },
-          emailRedirectTo: `${window.location.origin}/login`
+          emailRedirectTo: `https://cssbattle-pro.vercel.app/login`
         }
       });
 
@@ -808,17 +835,6 @@ const AdminDashboard = () => {
                   </Button>
                   <Button 
                     onClick={() => {
-                      console.log("Debug delete button clicked, player ID:", deleteConfirmation.player!.id);
-                      debugDeleteOperation(deleteConfirmation.player!.id);
-                    }}
-                    variant="outline"
-                    className="flex-1 border-yellow-500/50 hover:bg-yellow-500/10"
-                    disabled={loading}
-                  >
-                    Debug
-                  </Button>
-                  <Button 
-                    onClick={() => {
                       console.log("Delete button clicked, player ID:", deleteConfirmation.player!.id);
                       handleDeletePlayer(deleteConfirmation.player!.id);
                     }}
@@ -1180,6 +1196,15 @@ const AdminDashboard = () => {
                       ) : (
                         <div className="flex gap-2">
                           <Button
+                            onClick={() => handleSendPasswordReset(player)}
+                            size="sm"
+                            variant="outline"
+                            className="border-battle-purple/50 hover:bg-battle-purple/10"
+                          >
+                            <Key className="w-4 h-4 mr-1" />
+                            Reset Password
+                          </Button>
+                          <Button
                             onClick={() => handleEditPlayer(player)}
                             size="sm"
                             variant="outline"
@@ -1223,6 +1248,44 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
