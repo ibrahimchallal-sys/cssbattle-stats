@@ -186,7 +186,7 @@ const AdminDashboard = () => {
       
       // Send password reset email using Supabase
       const { error } = await supabase.auth.resetPasswordForEmail(player.email, {
-        redirectTo: `http://localhost:8080/reset-password`
+        redirectTo: `https://cssbattle-pro.vercel.app/reset-password`
       });
       
       if (error) {
@@ -1286,6 +1286,8 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
+
 
 
 

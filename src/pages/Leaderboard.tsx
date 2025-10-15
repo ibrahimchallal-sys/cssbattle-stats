@@ -17,7 +17,6 @@ interface Player {
 const Leaderboard = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
   const { toast } = useToast();
 
   const fetchPlayers = async () => {
@@ -39,65 +38,6 @@ const Leaderboard = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const fetchScoreFromProfile = async (profileUrl: string): Promise<number | null> => {
-    try {
-      const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(profileUrl)}`);
-      const html = await response.text();
-      
-      const scoreMatch = html.match(/<div[^>]*class="score"[^>]*>(\d+(?:,\d+)*)<\/div>/i) ||
-                         html.match(/score['":\s]+(\d+(?:,\d+)*)/i) ||
-                         html.match(/>(\d+(?:,\d+)*)\s*<[^>]*>.*?score/i);
-      
-      if (scoreMatch && scoreMatch[1]) {
-        return parseInt(scoreMatch[1].replace(/,/g, ''));
-      }
-      return null;
-    } catch (error) {
-      console.error('Error fetching score:', error);
-      return null;
-    }
-  };
-
-  const updateAllScores = async () => {
-    setUpdating(true);
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const player of players) {
-      if (player.cssbattle_profile_link) {
-        const score = await fetchScoreFromProfile(player.cssbattle_profile_link);
-        
-        if (score !== null) {
-          const { error } = await supabase
-            .from('players')
-            .update({ 
-              score, 
-              last_score_update: new Date().toISOString() 
-            })
-            .eq('id', player.id);
-
-          if (!error) {
-            successCount++;
-          } else {
-            failCount++;
-          }
-        } else {
-          failCount++;
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
-
-    setUpdating(false);
-    toast({
-      title: "Update Complete",
-      description: `Updated ${successCount} players. ${failCount} failed.`,
-    });
-    
-    fetchPlayers();
   };
 
   useEffect(() => {
@@ -124,15 +64,6 @@ const Leaderboard = () => {
               </h1>
               <p className="text-muted-foreground mt-2">CSS Battle Championship Rankings</p>
             </div>
-            
-            <Button
-              onClick={updateAllScores}
-              disabled={updating || loading}
-              className="gap-2"
-            >
-              <RefreshCw className={`w-4 h-4 ${updating ? 'animate-spin' : ''}`} />
-              Update Scores
-            </Button>
           </div>
 
           {loading ? (
@@ -159,12 +90,6 @@ const Leaderboard = () => {
                     <div className="text-right">
                       <div className="text-2xl font-bold text-primary">
                         {player.score.toLocaleString()}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {player.last_score_update 
-                          ? `Updated ${new Date(player.last_score_update).toLocaleDateString()}`
-                          : 'Not updated'
-                        }
                       </div>
                     </div>
                   </div>
