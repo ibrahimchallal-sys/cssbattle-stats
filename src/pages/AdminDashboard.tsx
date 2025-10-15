@@ -295,7 +295,7 @@ const AdminDashboard = () => {
           data: {
             full_name: createForm.full_name
           },
-          emailRedirectTo: `https://cssbattle-pro.vercel.app/login`
+          emailRedirectTo: `http://localhost:8080/login`
         }
       });
 
