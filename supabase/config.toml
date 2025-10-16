@@ -1,4 +1,0 @@
-project_id = "laiyslvxxlvexwaeneda"
-
-[functions.admin-manage-password]
-verify_jwt = true
