@@ -184,7 +184,7 @@ const LearningCenter = () => {
 
     // Only apply restrictions for non-admin users
     if (!isAdmin) {
-      document.addEventListener("keydown", (e) => {
+      const handleKeyDown = (e: KeyboardEvent) => {
         // Prevent Print Screen
         if (e.key === "PrintScreen") {
           navigator.clipboard.writeText("");
@@ -214,21 +214,95 @@ const LearningCenter = () => {
           e.preventDefault();
           return false;
         }
-      });
+
+        // Prevent Ctrl+Shift+I (developer tools)
+        if (e.ctrlKey && e.shiftKey && e.key === "I") {
+          e.preventDefault();
+          return false;
+        }
+
+        // Prevent Ctrl+U (view source)
+        if (e.ctrlKey && e.key === "u") {
+          e.preventDefault();
+          return false;
+        }
+      };
 
       // Prevent right-click
-      document.addEventListener("contextmenu", preventActions);
+      const handleContextMenu = (e: Event) => {
+        e.preventDefault();
+        toast({
+          title: t("learning.video.screenshotRestricted"),
+          description: t("learning.video.screenshotRestrictedDesc"),
+          variant: "destructive",
+        });
+        return false;
+      };
 
       // Prevent drag and drop
-      document.addEventListener("dragstart", preventActions);
-      document.addEventListener("drop", preventActions);
+      const handleDragStart = (e: Event) => {
+        e.preventDefault();
+        toast({
+          title: t("learning.video.screenshotRestricted"),
+          description: t("learning.video.copyRestrictedDesc"),
+          variant: "destructive",
+        });
+        return false;
+      };
+
+      // Prevent drop
+      const handleDrop = (e: Event) => {
+        e.preventDefault();
+        toast({
+          title: t("learning.video.screenshotRestricted"),
+          description: t("learning.video.copyRestrictedDesc"),
+          variant: "destructive",
+        });
+        return false;
+      };
+
+      // Prevent selection
+      const handleSelectStart = (e: Event) => {
+        e.preventDefault();
+        return false;
+      };
+
+      document.addEventListener("keydown", handleKeyDown);
+      document.addEventListener("contextmenu", handleContextMenu);
+      document.addEventListener("dragstart", handleDragStart);
+      document.addEventListener("drop", handleDrop);
+      document.addEventListener("selectstart", handleSelectStart);
+
+      // Prevent video download
+      const preventVideoDownload = () => {
+        const videos = document.querySelectorAll("video");
+        videos.forEach((video) => {
+          video.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            toast({
+              title: t("learning.video.screenshotRestricted"),
+              description: t("learning.video.screenshotRestrictedDesc"),
+              variant: "destructive",
+            });
+          });
+
+          // Remove download attribute if present
+          video.removeAttribute("controlsList");
+          video.setAttribute("controlsList", "nodownload");
+        });
+      };
+
+      // Run immediately and after a short delay to catch dynamically loaded videos
+      preventVideoDownload();
+      setTimeout(preventVideoDownload, 1000);
     }
 
     return () => {
       document.removeEventListener("keydown", () => {});
-      document.removeEventListener("contextmenu", preventActions);
-      document.removeEventListener("dragstart", preventActions);
-      document.removeEventListener("drop", preventActions);
+      document.removeEventListener("contextmenu", () => {});
+      document.removeEventListener("dragstart", () => {});
+      document.removeEventListener("drop", () => {});
+      document.removeEventListener("selectstart", () => {});
     };
   }, [isAdmin, toast, t]);
 
@@ -499,69 +573,196 @@ const LearningCenter = () => {
                         : "Votre navigateur ne prend pas en charge la balise vidéo."}
                     </video>
 
-                    {/* Video Overlay Controls */}
-                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                      {!videoCompleted ? (
-                        <div className="flex items-center gap-4">
-                          <Button
-                            onClick={handleVideoPlay}
-                            size="lg"
-                            className="bg-primary/80 hover:bg-primary text-white rounded-full w-16 h-16"
-                          >
-                            {isPlaying ? (
-                              <Pause className="w-8 h-8" />
-                            ) : (
-                              <Play className="w-8 h-8 ml-1" />
-                            )}
-                          </Button>
-                          <Button
-                            onClick={toggleFullscreen}
-                            size="lg"
-                            variant="outline"
-                            className="bg-black/50 hover:bg-black/70 text-white border-white/30 rounded-full w-12 h-12"
-                          >
-                            {isFullscreen ? (
-                              <Minimize className="w-6 h-6" />
-                            ) : (
-                              <Maximize className="w-6 h-6" />
-                            )}
-                          </Button>
-                        </div>
-                      ) : (
+                    {videoCompleted && (
+                      <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-center bg-black/70 p-4 rounded-lg">
                           <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
                           <p className="text-white font-medium">
                             {t("learning.video.completed")}
                           </p>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      {videoCompleted && (
-                        <CheckCircle className="w-5 h-5 text-green-500" />
-                      )}
-                      <span className="text-sm text-muted-foreground">
-                        {videoCompleted
-                          ? t("learning.video.completed")
-                          : t("learning.video.notCompleted")}
-                      </span>
-                    </div>
+                  {/* Video Controls - Above timeline with status label */}
+                  {!videoCompleted && (
+                    <div className="flex flex-col items-center">
+                      <div className="flex items-center gap-3 bg-black/20 backdrop-blur-sm rounded-full px-3 py-2 border border-white/10 mb-3">
+                        <div className="relative group">
+                          <Button
+                            onClick={() => {
+                              if (videoRef.current) {
+                                videoRef.current.currentTime = Math.max(
+                                  0,
+                                  videoRef.current.currentTime - 5
+                                );
+                              }
+                            }}
+                            size="sm"
+                            variant="ghost"
+                            className="bg-black/30 hover:bg-black/50 text-white border border-white/20 rounded-full w-9 h-9 transition-all duration-200 hover:scale-105"
+                          >
+                            <span className="text-xs font-bold">-5s</span>
+                          </Button>
+                          <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-black/80 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-10">
+                            {language === "en"
+                              ? "Back 5 seconds"
+                              : "Reculer 5 secondes"}
+                          </span>
+                        </div>
 
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleVideoReset}
-                        variant="outline"
-                        size="sm"
-                        className="border-battle-purple/50 hover:bg-battle-purple/10"
-                      >
-                        <RotateCcw className="w-4 h-4 mr-2" />
-                        {t("learning.video.reset")}
-                      </Button>
+                        <div className="relative group">
+                          <Button
+                            onClick={handleVideoPlay}
+                            size="sm"
+                            variant="ghost"
+                            className="bg-primary/80 hover:bg-primary text-white rounded-full w-9 h-9 transition-all duration-200 hover:scale-105"
+                          >
+                            {isPlaying ? (
+                              <Pause className="w-4 h-4" />
+                            ) : (
+                              <Play className="w-4 h-4 ml-0.5" />
+                            )}
+                          </Button>
+                          <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-black/80 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-10">
+                            {isPlaying
+                              ? language === "en"
+                                ? "Pause"
+                                : "Pause"
+                              : language === "en"
+                              ? "Play"
+                              : "Lecture"}
+                          </span>
+                        </div>
+
+                        <div className="relative group">
+                          <Button
+                            onClick={toggleFullscreen}
+                            size="sm"
+                            variant="ghost"
+                            className="bg-black/30 hover:bg-black/50 text-white border border-white/20 rounded-full w-9 h-9 transition-all duration-200 hover:scale-105"
+                          >
+                            {isFullscreen ? (
+                              <Minimize className="w-4 h-4" />
+                            ) : (
+                              <Maximize className="w-4 h-4" />
+                            )}
+                          </Button>
+                          <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-black/80 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-10">
+                            {isFullscreen
+                              ? language === "en"
+                                ? "Exit fullscreen"
+                                : "Quitter le plein écran"
+                              : language === "en"
+                              ? "Enter fullscreen"
+                              : "Plein écran"}
+                          </span>
+                        </div>
+
+                        <div className="relative group">
+                          <Button
+                            onClick={handleVideoReset}
+                            variant="ghost"
+                            size="sm"
+                            className="bg-black/30 hover:bg-black/50 text-white border border-white/20 rounded-full w-9 h-9 transition-all duration-200 hover:scale-105"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </Button>
+                          <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-black/80 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-10">
+                            {language === "en"
+                              ? "Reset video"
+                              : "Réinitialiser la vidéo"}
+                          </span>
+                        </div>
+
+                        {/* Status label beside buttons */}
+                        <div className="flex items-center ml-2 pl-2 border-l border-white/20">
+                          <div className="inline-flex items-center bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 px-2 py-1 rounded-full border border-yellow-500/30">
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            <span className="text-xs font-medium">
+                              {t("learning.video.notCompleted")}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
+                  )}
+
+                  {/* Video Timeline - Below controls */}
+                  <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      {videoRef.current
+                        ? `${Math.floor(
+                            videoRef.current.currentTime / 60
+                          )}:${Math.floor(videoRef.current.currentTime % 60)
+                            .toString()
+                            .padStart(2, "0")}`
+                        : "0:00"}
+                    </span>
+                    <span>
+                      {videoRef.current
+                        ? `${Math.floor(
+                            videoRef.current.duration / 60
+                          )}:${Math.floor(videoRef.current.duration % 60)
+                            .toString()
+                            .padStart(2, "0")}`
+                        : "0:00"}
+                    </span>
                   </div>
+                  <div className="mt-1 w-full bg-gray-200 rounded-full h-1.5">
+                    <div
+                      className="bg-battle-purple h-1.5 rounded-full"
+                      style={{
+                        width: videoRef.current
+                          ? `${
+                              (videoRef.current.currentTime /
+                                (videoRef.current.duration || 1)) *
+                              100
+                            }%`
+                          : "0%",
+                      }}
+                    ></div>
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground text-right">
+                    {language === "en"
+                      ? `Watched: ${Math.floor(maxTime / 60)}:${Math.floor(
+                          maxTime % 60
+                        )
+                          .toString()
+                          .padStart(2, "0")}`
+                      : `Regardé: ${Math.floor(maxTime / 60)}:${Math.floor(
+                          maxTime % 60
+                        )
+                          .toString()
+                          .padStart(2, "0")}`}
+                  </div>
+
+                  {/* Status section for completed video */}
+                  {videoCompleted && (
+                    <div className="flex justify-between items-center mt-4">
+                      <div className="flex items-center">
+                        <div className="inline-flex items-center bg-green-500/10 text-green-600 dark:text-green-400 px-3 py-1 rounded-full border border-green-500/30">
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          <span className="text-sm font-medium">
+                            {t("learning.video.completed")}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleVideoReset}
+                          variant="outline"
+                          size="sm"
+                          className="border-battle-purple/50 hover:bg-battle-purple/10"
+                        >
+                          <RotateCcw className="w-4 h-4 mr-2" />
+                          {t("learning.video.reset")}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

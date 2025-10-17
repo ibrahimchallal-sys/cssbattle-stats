@@ -55,8 +55,12 @@ const Navbar = () => {
   const getThemeLabel = () => {
     if (themePreference === "auto") return "Auto";
     return appliedTheme === "dark"
-      ? t("common.continue") + " Light Mode"
-      : t("common.continue") + " Dark Mode";
+      ? language === "fr"
+        ? "Mode clair"
+        : "Light Mode"
+      : language === "fr"
+      ? "Mode sombre"
+      : "Dark Mode";
   };
 
   const toggleMenu = () => {

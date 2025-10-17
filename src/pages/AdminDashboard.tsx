@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -972,6 +973,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6 mt-16">
+      <Navbar />
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

@@ -47,10 +47,10 @@ export default function Contact() {
 
   const teamMembers = [
     {
-      name: "ABDEL MONEIM MAGOURA",
+      name: "ABDEL MONIM MAGOURA",
       role: "Stagiaire",
       cohort: "DEVOWS 203",
-      email: "abdelmoneim@admincss.com",
+      email: "mazgouraabdalmounim@gmail.com",
     },
     {
       name: "IBRAHIM CHALLAL",
