@@ -12,6 +12,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminMessages from "./pages/AdminMessages";
 import AdminPlayerDetails from "./pages/AdminPlayerDetails";
 import Leaderboard from "./pages/Leaderboard";
+import LearningCenter from "./pages/LearningCenter";
 import DatabaseTest from "./pages/DatabaseTest";
 import DatabasePermissionsTest from "./pages/DatabasePermissionsTest";
 import PasswordReset from "./pages/PasswordReset";
@@ -85,6 +86,15 @@ const App = () => (
               <>
                 <Navbar />
                 <Leaderboard />
+              </>
+            }
+          />
+          <Route
+            path="/learning"
+            element={
+              <>
+                <Navbar />
+                <LearningCenter />
               </>
             }
           />

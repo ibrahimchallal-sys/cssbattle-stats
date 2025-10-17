@@ -7,6 +7,7 @@ import {
   Moon,
   CloudSun,
   LogOut,
+  BookOpen,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
@@ -71,12 +72,14 @@ const Navbar = () => {
   const getPlayerNavLinks = () => [
     { name: "Home", href: "/" },
     { name: "Leaderboard", href: "/leaderboard" },
+    { name: "Learning", href: "/learning" },
     { name: "Contact", href: "/contact" },
   ];
 
   const getAdminNavLinks = () => [
     { name: "Home", href: "/" },
     { name: "Leaderboard", href: "/leaderboard" },
+    { name: "Learning", href: "/learning" },
     { name: "Dashboard", href: "/admin/dashboard" },
     { name: "Messages", href: "/admin/messages" },
   ];
@@ -88,6 +91,7 @@ const Navbar = () => {
     : [
         { name: "Home", href: "/" },
         { name: "Leaderboard", href: "/leaderboard" },
+        { name: "Learning", href: "/learning" },
       ];
 
   return (
