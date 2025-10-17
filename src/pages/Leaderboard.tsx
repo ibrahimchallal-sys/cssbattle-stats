@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { GROUP_OPTIONS } from "@/constants/groups";
 
 interface Player {
@@ -32,6 +33,7 @@ const Leaderboard = () => {
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const { toast } = useToast();
   const { user } = useAuth();
+  const { t, language } = useLanguage();
 
   const fetchPlayers = async () => {
     setLoading(true);
@@ -54,8 +56,11 @@ const Leaderboard = () => {
       setPlayers(data || []);
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to fetch leaderboard data",
+        title: language === "en" ? "Error" : "Erreur",
+        description:
+          language === "en"
+            ? "Failed to fetch leaderboard data"
+            : "Échec de la récupération des données du classement",
         variant: "destructive",
       });
     } finally {
@@ -122,17 +127,19 @@ const Leaderboard = () => {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Leaderboard
+                {language === "en" ? "Leaderboard" : "Classement"}
               </h1>
               <p className="text-muted-foreground mt-1">
-                CSS Battle Championship
+                {language === "en"
+                  ? "CSS Battle Championship"
+                  : "Championnat CSS Battle"}
               </p>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center">
                 <Target className="w-4 h-4 text-muted-foreground mr-1" />
                 <span className="text-xs text-muted-foreground">
-                  {players.length} Players
+                  {players.length} {language === "en" ? "Players" : "Joueurs"}
                 </span>
               </div>
               <Button
@@ -144,7 +151,7 @@ const Leaderboard = () => {
                 <RefreshCw
                   className={`w-3 h-3 mr-1 ${loading ? "animate-spin" : ""}`}
                 />
-                Refresh
+                {language === "en" ? "Refresh" : "Actualiser"}
               </Button>
             </div>
           </div>
@@ -162,7 +169,7 @@ const Leaderboard = () => {
                     : "border-battle-purple/50 hover:bg-battle-purple/10"
                 }`}
               >
-                All Groups
+                {language === "en" ? "All Groups" : "Tous les Groupes"}
               </Button>
               {uniqueGroups.slice(0, 5).map((group) => (
                 <Button
@@ -271,6 +278,12 @@ const Leaderboard = () => {
 
               {/* Positions 4-10 in a compact table */}
               <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Users className="w-5 h-5 mr-2 text-battle-purple" />
+                    {language === "en" ? "Top Players" : "Meilleurs Joueurs"}
+                  </CardTitle>
+                </CardHeader>
                 <CardContent className="p-0">
                   <div className="divide-y divide-border">
                     {normalPlayers.map((player, index) => {
@@ -303,7 +316,7 @@ const Leaderboard = () => {
                                 {player.full_name}
                                 {isCurrentUser && (
                                   <span className="ml-2 text-xs bg-primary/20 px-1.5 py-0.5 rounded">
-                                    You
+                                    {language === "en" ? "You" : "Vous"}
                                   </span>
                                 )}
                               </h3>
@@ -336,7 +349,9 @@ const Leaderboard = () => {
 
                   {normalPlayers.length === 0 && (
                     <div className="p-8 text-center text-muted-foreground">
-                      No players found in this group
+                      {language === "en"
+                        ? "No players found in this group"
+                        : "Aucun joueur trouvé dans ce groupe"}
                     </div>
                   )}
                 </CardContent>
@@ -345,6 +360,12 @@ const Leaderboard = () => {
               {/* Current User Position */}
               {user && currentUserData && userRank > 0 && (
                 <Card className="bg-card/50 backdrop-blur-sm border-primary/50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Target className="w-5 h-5 mr-2 text-battle-purple" />
+                      {language === "en" ? "Your Position" : "Votre Position"}
+                    </CardTitle>
+                  </CardHeader>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/20 font-bold text-primary border border-primary/30">
@@ -355,7 +376,7 @@ const Leaderboard = () => {
                         <h3 className="font-bold text-primary truncate">
                           {currentUserData.full_name}
                           <span className="ml-2 text-xs bg-primary/20 px-2 py-1 rounded">
-                            You
+                            {language === "en" ? "You" : "Vous"}
                           </span>
                         </h3>
                         <Badge
@@ -380,7 +401,11 @@ const Leaderboard = () => {
                     {userRank > 10 && (
                       <div className="mt-3 pt-3 border-t border-border">
                         <p className="text-center text-xs text-muted-foreground">
-                          {userRank - 10} positions away from top 10
+                          {language === "en"
+                            ? `${userRank - 10} positions away from top 10`
+                            : `${
+                                userRank - 10
+                              } positions avant d'atteindre le top 10`}
                         </p>
                       </div>
                     )}

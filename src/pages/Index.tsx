@@ -6,20 +6,22 @@ import { Code2, Trophy, Users, Zap, Calendar } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/contexts/AdminContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
+  const { t, language } = useLanguage();
   const [playerCount, setPlayerCount] = useState<number | null>(null);
   const [daysLeftInMonth, setDaysLeftInMonth] = useState<number>(0);
-  
+
   const codeExample = [
     ".battle {",
     "  display: flex;",
     "  background: linear-gradient(135deg, #A020F0, #E796E7);",
     "  transform: scale(1.1);",
-    "}"
+    "}",
   ];
 
   useEffect(() => {
@@ -28,16 +30,16 @@ const Index = () => {
       fetchPlayerCount();
       calculateDaysLeftInMonth();
     }, 100);
-    
+
     return () => clearTimeout(timer);
   }, []);
 
   const fetchPlayerCount = async () => {
     try {
       const { count, error } = await supabase
-        .from('players')
-        .select('*', { count: 'exact', head: true });
-      
+        .from("players")
+        .select("*", { count: "exact", head: true });
+
       if (!error && count !== null) {
         setPlayerCount(count);
       } else {
@@ -60,9 +62,28 @@ const Index = () => {
       <Navbar />
       {/* Animated Background Shapes */}
       <FloatingShape color="purple" size={300} top="15%" left="5%" delay={0} />
-      <FloatingShape color="pink" size={200} top="65%" left="80%" delay={1} rotation />
-      <FloatingShape color="yellow" size={150} top="35%" left="75%" delay={0.5} />
-      <FloatingShape color="purple" size={100} top="85%" left="15%" delay={1.5} />
+      <FloatingShape
+        color="pink"
+        size={200}
+        top="65%"
+        left="80%"
+        delay={1}
+        rotation
+      />
+      <FloatingShape
+        color="yellow"
+        size={150}
+        top="35%"
+        left="75%"
+        delay={0.5}
+      />
+      <FloatingShape
+        color="purple"
+        size={100}
+        top="85%"
+        left="15%"
+        delay={1.5}
+      />
 
       {/* Hero Section */}
       <section className="relative z-10 container mx-auto px-4 py-24 md:py-32">
@@ -70,7 +91,9 @@ const Index = () => {
           {/* Event Tag */}
           <div className="inline-flex items-center gap-2 bg-gradient-primary text-foreground px-4 py-2 rounded-full mb-6 md:mb-8 shadow-glow">
             <Zap className="w-4 h-4" />
-            <span className="text-sm font-semibold uppercase tracking-wider">Live Competition</span>
+            <span className="text-sm font-semibold uppercase tracking-wider">
+              {language === "en" ? "Live Competition" : "Compétition en Direct"}
+            </span>
           </div>
 
           {/* Main Title */}
@@ -79,12 +102,16 @@ const Index = () => {
             <span className="block bg-gradient-primary bg-clip-text text-transparent">
               BATTLE
             </span>
-            <span className="block text-battle-accent">CHAMPIONSHIP</span>
+            <span className="block text-battle-accent">
+              {language === "en" ? "CHAMPIONSHIP" : "CHAMPIONNAT"}
+            </span>
           </h1>
 
           {/* Subtitle */}
           <p className="text-lg md:text-xl lg:text-2xl text-foreground/80 mb-8 md:mb-12 max-w-3xl mx-auto">
-            Compete against developers worldwide. Write the cleanest code. Claim victory.
+            {language === "en"
+              ? "Compete against developers worldwide. Write the cleanest code. Claim victory."
+              : "Affrontez des développeurs du monde entier. Écrivez le code le plus propre. Remportez la victoire."}
           </p>
 
           {/* Code Example */}
@@ -101,20 +128,34 @@ const Index = () => {
             <div className="w-12 h-12 md:w-16 md:h-16 bg-battle-pink rounded-lg flex items-center justify-center mb-4 shadow-glow-pink">
               <Users className="w-6 h-6 md:w-8 md:h-8 text-background" />
             </div>
-            <h3 className="text-xl md:text-2xl font-bold mb-2 text-foreground">Global Players</h3>
+            <h3 className="text-xl md:text-2xl font-bold mb-2 text-foreground">
+              {language === "en" ? "Global Players" : "Joueurs Mondiaux"}
+            </h3>
             <p className="text-2xl md:text-3xl font-bold text-battle-pink mb-2">
-              {playerCount !== null ? playerCount.toLocaleString() : '1,000+'}
+              {playerCount !== null ? playerCount.toLocaleString() : "1,000+"}
             </p>
-            <p className="text-foreground/70">Developers competing</p>
+            <p className="text-foreground/70">
+              {language === "en"
+                ? "Developers competing"
+                : "Développeurs en compétition"}
+            </p>
           </Card>
 
           <Card className="bg-card/50 backdrop-blur-sm border-battle-accent/30 p-6 md:p-8 hover:scale-105 transition-transform hover:shadow-glow-accent">
             <div className="w-12 h-12 md:w-16 md:h-16 bg-battle-accent rounded-lg flex items-center justify-center mb-4 shadow-glow-accent">
               <Code2 className="w-6 h-6 md:w-8 md:h-8 text-background" />
             </div>
-            <h3 className="text-xl md:text-2xl font-bold mb-2 text-foreground">Challenges</h3>
-            <p className="text-2xl md:text-3xl font-bold text-battle-accent mb-2">50+</p>
-            <p className="text-foreground/70">Unique CSS battles</p>
+            <h3 className="text-xl md:text-2xl font-bold mb-2 text-foreground">
+              {language === "en" ? "Challenges" : "Défis"}
+            </h3>
+            <p className="text-2xl md:text-3xl font-bold text-battle-accent mb-2">
+              50+
+            </p>
+            <p className="text-foreground/70">
+              {language === "en"
+                ? "Unique CSS battles"
+                : "Batailles CSS uniques"}
+            </p>
           </Card>
         </div>
 
@@ -124,15 +165,23 @@ const Index = () => {
             <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-primary rounded-lg flex items-center justify-center mb-4 shadow-glow">
               <Trophy className="w-6 h-6 md:w-8 md:h-8 text-foreground" />
             </div>
-            <h3 className="text-xl md:text-2xl font-bold mb-2 text-foreground">Daily Challenge</h3>
-            <p className="text-foreground/70 mb-4">Test your skills with today's CSS battle</p>
-            <a 
-              href="https://cssbattle.dev/daily" 
-              target="_blank" 
+            <h3 className="text-xl md:text-2xl font-bold mb-2 text-foreground">
+              {language === "en" ? "Daily Challenge" : "Défi Quotidien"}
+            </h3>
+            <p className="text-foreground/70 mb-4">
+              {language === "en"
+                ? "Test your skills with today's CSS battle"
+                : "Testez vos compétences avec la bataille CSS d'aujourd'hui"}
+            </p>
+            <a
+              href="https://cssbattle.dev/daily"
+              target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center bg-gradient-primary text-foreground px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform shadow-glow"
             >
-              Take on the Daily Challenge
+              {language === "en"
+                ? "Take on the Daily Challenge"
+                : "Relever le Défi Quotidien"}
             </a>
           </div>
         </Card>
@@ -143,21 +192,35 @@ const Index = () => {
         <Card className="bg-gradient-primary p-8 md:p-12 text-center shadow-glow max-w-4xl mx-auto">
           <div className="flex flex-wrap gap-4 justify-center text-sm md:text-base">
             <div className="bg-background/20 backdrop-blur-sm px-4 md:px-6 py-2 md:py-3 rounded-lg">
-              <span className="text-foreground/80">Online Event</span>
+              <span className="text-foreground/80">
+                {language === "en" ? "Online Event" : "Événement en Ligne"}
+              </span>
             </div>
             <div className="bg-background/20 backdrop-blur-sm px-4 md:px-6 py-2 md:py-3 rounded-lg">
-              <span className="text-foreground/80">All Skill Levels</span>
+              <span className="text-foreground/80">
+                {language === "en"
+                  ? "All Skill Levels"
+                  : "Tous Niveaux de Compétence"}
+              </span>
             </div>
             <div className="bg-background/20 backdrop-blur-sm px-4 md:px-6 py-2 md:py-3 rounded-lg">
-              <span className="text-foreground/80">Live Leaderboard</span>
+              <span className="text-foreground/80">
+                {language === "en"
+                  ? "Live Leaderboard"
+                  : "Classement en Direct"}
+              </span>
             </div>
           </div>
-          
+
           {/* Monthly Counter Card */}
           <Card className="mt-8 bg-background/30 backdrop-blur-sm border-foreground/20 p-6">
             <div className="flex items-center justify-center gap-3 mb-2">
               <Calendar className="w-5 h-5 text-foreground" />
-              <h3 className="text-lg md:text-xl font-bold text-foreground">Days Left This Month</h3>
+              <h3 className="text-lg md:text-xl font-bold text-foreground">
+                {language === "en"
+                  ? "Days Left This Month"
+                  : "Jours Restants Ce Mois"}
+              </h3>
             </div>
             <p className="text-2xl md:text-3xl font-bold text-battle-accent">
               {daysLeftInMonth}

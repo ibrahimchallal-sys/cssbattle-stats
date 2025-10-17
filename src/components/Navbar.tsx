@@ -8,16 +8,19 @@ import {
   CloudSun,
   LogOut,
   BookOpen,
+  Globe,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/contexts/AdminContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useTheme } from "@/hooks/useTheme";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { themePreference, appliedTheme, toggleTheme } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout: userLogout } = useAuth();
@@ -51,7 +54,9 @@ const Navbar = () => {
 
   const getThemeLabel = () => {
     if (themePreference === "auto") return "Auto";
-    return appliedTheme === "dark" ? "Light Mode" : "Dark Mode";
+    return appliedTheme === "dark"
+      ? t("common.continue") + " Light Mode"
+      : t("common.continue") + " Dark Mode";
   };
 
   const toggleMenu = () => {
@@ -68,20 +73,24 @@ const Navbar = () => {
     navigate("/");
   };
 
+  const toggleLanguage = () => {
+    setLanguage(language === "en" ? "fr" : "en");
+  };
+
   // Build nav links dynamically based on user status
   const getPlayerNavLinks = () => [
-    { name: "Home", href: "/" },
-    { name: "Leaderboard", href: "/leaderboard" },
-    { name: "Learning", href: "/learning" },
-    { name: "Contact", href: "/contact" },
+    { name: t("navbar.home"), href: "/" },
+    { name: t("navbar.leaderboard"), href: "/leaderboard" },
+    { name: t("navbar.learning"), href: "/learning" },
+    { name: t("navbar.contact"), href: "/contact" },
   ];
 
   const getAdminNavLinks = () => [
-    { name: "Home", href: "/" },
-    { name: "Leaderboard", href: "/leaderboard" },
-    { name: "Learning", href: "/learning" },
-    { name: "Dashboard", href: "/admin/dashboard" },
-    { name: "Messages", href: "/admin/messages" },
+    { name: t("navbar.home"), href: "/" },
+    { name: t("navbar.leaderboard"), href: "/leaderboard" },
+    { name: t("navbar.learning"), href: "/learning" },
+    { name: t("navbar.dashboard"), href: "/admin/dashboard" },
+    { name: t("navbar.messages"), href: "/admin/messages" },
   ];
 
   const navLinks = isAdmin
@@ -89,9 +98,9 @@ const Navbar = () => {
     : user
     ? getPlayerNavLinks()
     : [
-        { name: "Home", href: "/" },
-        { name: "Leaderboard", href: "/leaderboard" },
-        { name: "Learning", href: "/learning" },
+        { name: t("navbar.home"), href: "/" },
+        { name: t("navbar.leaderboard"), href: "/leaderboard" },
+        { name: t("navbar.learning"), href: "/learning" },
       ];
 
   return (
@@ -112,12 +121,21 @@ const Navbar = () => {
             {/* Institute Name */}
             <div className="flex-1 text-center px-2">
               <span className="text-xs font-medium text-foreground">
-                institut Spécialisé de Formation de l'Offshoring
+                {t("navbar.institute")}
               </span>
             </div>
 
             {/* Mobile menu button */}
             <div className="flex items-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleLanguage}
+                className="text-foreground hover:bg-battle-purple/10 mr-2"
+                title={language === "en" ? "Français" : "English"}
+              >
+                <Globe className="h-5 w-5" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -153,7 +171,7 @@ const Navbar = () => {
               className="h-10 w-auto"
             />
             <span className="ml-3 text-sm font-medium text-foreground">
-              institut Spécialisé de Formation de l'Offshoring
+              {t("navbar.institute")}
             </span>
           </div>
 
@@ -179,6 +197,15 @@ const Navbar = () => {
             <Button
               variant="ghost"
               size="icon"
+              onClick={toggleLanguage}
+              className="text-foreground hover:bg-battle-purple/10"
+              title={language === "en" ? "Français" : "English"}
+            >
+              <Globe className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={toggleTheme}
               className="text-foreground hover:bg-battle-purple/10"
               title={getThemeLabel()}
@@ -194,7 +221,7 @@ const Navbar = () => {
                   className="border-red-500/50 hover:bg-red-500/10 text-xs flex items-center"
                 >
                   <LogOut className="w-3 h-3 mr-1" />
-                  Logout
+                  {t("navbar.logout")}
                 </Button>
               )}
               {user ? (
@@ -212,7 +239,7 @@ const Navbar = () => {
                     className="border-red-500/50 hover:bg-red-500/10 text-xs flex items-center"
                   >
                     <LogOut className="w-3 h-3 mr-1" />
-                    Logout
+                    {t("navbar.logout")}
                   </Button>
                 </div>
               ) : (
@@ -223,7 +250,7 @@ const Navbar = () => {
                       onClick={() => navigate("/login")}
                       className="border-battle-purple/50 hover:bg-battle-purple/10"
                     >
-                      Log in
+                      {t("navbar.login")}
                     </Button>
                     <Button
                       onClick={() =>
@@ -234,7 +261,7 @@ const Navbar = () => {
                       }
                       className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
                     >
-                      S'inscrire
+                      {t("navbar.register")}
                     </Button>
                   </>
                 )
@@ -286,7 +313,7 @@ const Navbar = () => {
                       className="w-full border-red-500/50 hover:bg-red-500/10 flex items-center"
                     >
                       <LogOut className="w-4 h-4 mr-2" />
-                      Logout
+                      {t("navbar.logout")}
                     </Button>
                     <Button
                       onClick={() => {
@@ -298,6 +325,17 @@ const Navbar = () => {
                       className="w-full border-battle-purple/50 hover:bg-battle-purple/10"
                     >
                       {getThemeLabel()}
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        toggleLanguage();
+                        setIsMenuOpen(false);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-battle-purple/50 hover:bg-battle-purple/10"
+                    >
+                      {language === "en" ? "FR" : "EN"}
                     </Button>
                   </>
                 ) : isAdmin ? (
@@ -312,7 +350,7 @@ const Navbar = () => {
                       className="w-full border-red-500/50 hover:bg-red-500/10 flex items-center"
                     >
                       <LogOut className="w-4 h-4 mr-2" />
-                      Logout
+                      {t("navbar.logout")}
                     </Button>
                     <Button
                       onClick={() => {
@@ -325,6 +363,17 @@ const Navbar = () => {
                     >
                       {getThemeLabel()}
                     </Button>
+                    <Button
+                      onClick={() => {
+                        toggleLanguage();
+                        setIsMenuOpen(false);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-battle-purple/50 hover:bg-battle-purple/10"
+                    >
+                      {language === "en" ? "FR" : "EN"}
+                    </Button>
                   </>
                 ) : (
                   <>
@@ -336,7 +385,7 @@ const Navbar = () => {
                       }}
                       className="w-full border-battle-purple/50 hover:bg-battle-purple/10"
                     >
-                      Log in
+                      {t("navbar.login")}
                     </Button>
                     <Button
                       onClick={() => {
@@ -348,7 +397,7 @@ const Navbar = () => {
                       }}
                       className="w-full bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
                     >
-                      S'inscrire
+                      {t("navbar.register")}
                     </Button>
                   </>
                 )}

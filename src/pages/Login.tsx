@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import PasswordInput from "@/components/PasswordInput";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useState, useEffect } from "react";
 import { Mail, Lock, ArrowLeft, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 const Login = () => {
   const navigate = useNavigate();
   const { login, user } = useAuth();
+  const { t, language } = useLanguage();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     email: "",
@@ -52,8 +54,11 @@ const Login = () => {
         console.log("Login successful!");
         // Show success message
         toast({
-          title: "Success",
-          description: "You have been logged in successfully!",
+          title: language === "en" ? "Success" : "Succès",
+          description:
+            language === "en"
+              ? "You have been logged in successfully!"
+              : "Vous vous êtes connecté avec succès !",
         });
         // Redirect to home page after successful login
         navigate("/");
@@ -61,15 +66,25 @@ const Login = () => {
         if (result.emailVerified === false) {
           setShowEmailVerificationMessage(true);
         } else {
-          setError(result.error || "Login failed");
+          setError(
+            result.error ||
+              (language === "en" ? "Login failed" : "Échec de la connexion")
+          );
         }
       }
     } catch (err) {
       console.error("Login - Unexpected error:", err);
-      setError("An unexpected error occurred");
+      setError(
+        language === "en"
+          ? "An unexpected error occurred"
+          : "Une erreur inattendue s'est produite"
+      );
       toast({
-        title: "Error",
-        description: "An unexpected error occurred during login",
+        title: language === "en" ? "Error" : "Erreur",
+        description:
+          language === "en"
+            ? "An unexpected error occurred during login"
+            : "Une erreur inattendue s'est produite lors de la connexion",
         variant: "destructive",
       });
     } finally {
@@ -87,14 +102,14 @@ const Login = () => {
             className="flex items-center gap-2 text-foreground hover:bg-battle-purple/10"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Home
+            {language === "en" ? "Back to Home" : "Retour à l'accueil"}
           </Button>
           <h1 className="text-3xl font-bold text-center flex-1 text-foreground">
             CSS{" "}
             <span className="bg-gradient-primary bg-clip-text text-transparent">
               BATTLE
             </span>{" "}
-            Championship
+            {language === "en" ? "Championship" : "Championnat"}
           </h1>
           <div className="w-24"></div> {/* Spacer for alignment */}
         </div>
@@ -102,9 +117,13 @@ const Login = () => {
         <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 p-6 md:p-8 max-w-md mx-auto">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-              Log In
+              {language === "en" ? "Log In" : "Connexion"}
             </h2>
-            <p className="text-foreground/80">Access your account</p>
+            <p className="text-foreground/80">
+              {language === "en"
+                ? "Access your account"
+                : "Accédez à votre compte"}
+            </p>
           </div>
 
           {showEmailVerificationMessage && (
@@ -112,26 +131,29 @@ const Login = () => {
               <div className="flex items-center">
                 <AlertCircle className="w-5 h-5 text-yellow-500 mr-2" />
                 <span className="text-yellow-200 font-medium">
-                  Email Verification Required
+                  {language === "en"
+                    ? "Email Verification Required"
+                    : "Vérification de l'e-mail requise"}
                 </span>
               </div>
               <p className="text-sm text-yellow-200 mt-2">
-                Please check your email and click the verification link before
-                logging in.
+                {language === "en"
+                  ? "Please check your email and click the verification link before logging in."
+                  : "Veuillez vérifier votre e-mail et cliquer sur le lien de vérification avant de vous connecter."}
               </p>
             </div>
           )}
 
           {error && !showEmailVerificationMessage && (
             <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200">
-              Error: {error}
+              {language === "en" ? "Error:" : "Erreur :"} {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-foreground">
-                Email
+                {language === "en" ? "Email" : "E-mail"}
               </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
@@ -141,7 +163,11 @@ const Login = () => {
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  placeholder="Enter your email"
+                  placeholder={
+                    language === "en"
+                      ? "Enter your email"
+                      : "Entrez votre e-mail"
+                  }
                   className="pl-10 bg-background/50 border-battle-purple/30"
                   required
                 />
@@ -150,14 +176,18 @@ const Login = () => {
 
             <div className="space-y-2">
               <Label htmlFor="password" className="text-foreground">
-                Password
+                {language === "en" ? "Password" : "Mot de passe"}
               </Label>
               <PasswordInput
                 id="password"
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                placeholder="Enter your password"
+                placeholder={
+                  language === "en"
+                    ? "Enter your password"
+                    : "Entrez votre mot de passe"
+                }
                 className="bg-background/50 border-battle-purple/30"
                 required
               />
@@ -170,7 +200,9 @@ const Login = () => {
                 onClick={() => navigate("/register")}
                 className="px-0 text-battle-purple hover:text-battle-pink"
               >
-                Don't have an account? Register
+                {language === "en"
+                  ? "Don't have an account? Register"
+                  : "Pas de compte ? Inscrivez-vous"}
               </Button>
             </div>
 
@@ -181,7 +213,7 @@ const Login = () => {
                 onClick={() => navigate("/")}
                 className="flex-1 border-battle-purple/50 hover:bg-battle-purple/10"
               >
-                Cancel
+                {language === "en" ? "Cancel" : "Annuler"}
               </Button>
               <Button
                 type="submit"
@@ -191,10 +223,14 @@ const Login = () => {
                 {isSubmitting ? (
                   <span className="flex items-center">
                     <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
-                    Logging in...
+                    {language === "en"
+                      ? "Logging in..."
+                      : "Connexion en cours..."}
                   </span>
-                ) : (
+                ) : language === "en" ? (
                   "Log In"
+                ) : (
+                  "Se connecter"
                 )}
               </Button>
             </div>

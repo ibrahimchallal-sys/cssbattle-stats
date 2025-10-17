@@ -27,6 +27,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/contexts/AdminContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface QuizQuestion {
   id: number;
@@ -49,6 +50,7 @@ const LearningCenter = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
+  const { t, language } = useLanguage();
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -56,6 +58,9 @@ const LearningCenter = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoCompleted, setVideoCompleted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Store the maximum time the player has reached
+  const [maxTime, setMaxTime] = useState(0);
 
   // Quiz state
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -97,42 +102,76 @@ const LearningCenter = () => {
   const quizQuestions: QuizQuestion[] = [
     {
       id: 1,
-      question: "What is the main purpose of CSS Battle?",
-      options: [
-        "To compete in JavaScript coding challenges",
-        "To improve CSS skills through visual challenges",
-        "To learn HTML structure",
-        "To practice database queries",
-      ],
+      question:
+        language === "en"
+          ? "What is the main purpose of CSS Battle?"
+          : "Quel est le but principal de CSS Battle ?",
+      options:
+        language === "en"
+          ? [
+              "To compete in JavaScript coding challenges",
+              "To improve CSS skills through visual challenges",
+              "To learn HTML structure",
+              "To practice database queries",
+            ]
+          : [
+              "Participer à des défis de codage JavaScript",
+              "Améliorer les compétences CSS grâce à des défis visuels",
+              "Apprendre la structure HTML",
+              "Pratiquer les requêtes de base de données",
+            ],
       correctAnswer: 1,
       explanation:
-        "CSS Battle is a platform designed to help developers improve their CSS skills through fun, visual challenges.",
+        language === "en"
+          ? "CSS Battle is a platform designed to help developers improve their CSS skills through fun, visual challenges."
+          : "CSS Battle est une plateforme conçue pour aider les développeurs à améliorer leurs compétences CSS grâce à des défis visuels amusants.",
     },
     {
       id: 2,
-      question: "How are scores calculated in CSS Battle?",
-      options: [
-        "Based on lines of code written",
-        "Based on accuracy and code efficiency",
-        "Based on time spent",
-        "Based on number of attempts",
-      ],
+      question:
+        language === "en"
+          ? "How are scores calculated in CSS Battle?"
+          : "Comment les scores sont-ils calculés dans CSS Battle ?",
+      options:
+        language === "en"
+          ? [
+              "Based on lines of code written",
+              "Based on accuracy and code efficiency",
+              "Based on time spent",
+              "Based on number of attempts",
+            ]
+          : [
+              "Basé sur le nombre de lignes de code écrites",
+              "Basé sur la précision et l'efficacité du code",
+              "Basé sur le temps passé",
+              "Basé sur le nombre de tentatives",
+            ],
       correctAnswer: 1,
       explanation:
-        "Scores are calculated based on how closely your CSS matches the target image, with efficiency measured by code length.",
+        language === "en"
+          ? "Scores are calculated based on how closely your CSS matches the target image, with efficiency measured by code length."
+          : "Les scores sont calculés en fonction de la ressemblance entre votre CSS et l'image cible, avec une efficacité mesurée par la longueur du code.",
     },
     {
       id: 3,
-      question: "Which CSS property is most important in CSS Battle?",
-      options: [
-        "background-color",
-        "position",
-        "clip-path",
-        "All of the above",
-      ],
+      question:
+        language === "en"
+          ? "Which CSS property is most important in CSS Battle?"
+          : "Quelle propriété CSS est la plus importante dans CSS Battle ?",
+      options:
+        language === "en"
+          ? ["background-color", "position", "clip-path", "All of the above"]
+          : [
+              "background-color",
+              "position",
+              "clip-path",
+              "Toutes les réponses ci-dessus",
+            ],
       correctAnswer: 3,
       explanation:
-        "CSS Battle challenges often require a combination of properties, including positioning, background colors, and clip-path for complex shapes.",
+        language === "en"
+          ? "CSS Battle challenges often require a combination of properties, including positioning, background colors, and clip-path for complex shapes."
+          : "Les défis CSS Battle nécessitent souvent une combinaison de propriétés, notamment le positionnement, les couleurs d'arrière-plan et clip-path pour les formes complexes.",
     },
   ];
 
@@ -150,8 +189,8 @@ const LearningCenter = () => {
         if (e.key === "PrintScreen") {
           navigator.clipboard.writeText("");
           toast({
-            title: "Action Restricted",
-            description: "Screenshots are not allowed during learning.",
+            title: t("learning.video.screenshotRestricted"),
+            description: t("learning.video.screenshotRestrictedDesc"),
             variant: "destructive",
           });
         }
@@ -163,8 +202,8 @@ const LearningCenter = () => {
         ) {
           e.preventDefault();
           toast({
-            title: "Action Restricted",
-            description: "Copy/paste actions are not allowed during learning.",
+            title: t("learning.video.screenshotRestricted"),
+            description: t("learning.video.copyRestrictedDesc"),
             variant: "destructive",
           });
           return false;
@@ -191,10 +230,7 @@ const LearningCenter = () => {
       document.removeEventListener("dragstart", preventActions);
       document.removeEventListener("drop", preventActions);
     };
-  }, [isAdmin, toast]);
-
-  // Store the maximum time the player has reached
-  const [maxTime, setMaxTime] = useState(0);
+  }, [isAdmin, toast, t]);
 
   const handleVideoPlay = () => {
     if (videoRef.current) {
@@ -211,8 +247,8 @@ const LearningCenter = () => {
     setIsPlaying(false);
     setVideoCompleted(true);
     toast({
-      title: "Video Completed!",
-      description: "You've finished watching the tutorial. Now try the quiz!",
+      title: t("learning.video.completed"),
+      description: t("learning.video.completedDesc"),
       duration: 3000,
     });
   };
@@ -227,6 +263,7 @@ const LearningCenter = () => {
       setShowResult(false);
       setQuizScore(0);
       setIsPlaying(false);
+      setMaxTime(0); // Reset max time tracking
     }
   };
 
@@ -239,8 +276,8 @@ const LearningCenter = () => {
         })
         .catch(() => {
           toast({
-            title: "Fullscreen Error",
-            description: "Could not enter fullscreen mode.",
+            title: t("learning.video.fullscreenError"),
+            description: t("learning.video.fullscreenErrorDesc"),
             variant: "destructive",
           });
         });
@@ -252,8 +289,8 @@ const LearningCenter = () => {
         })
         .catch(() => {
           toast({
-            title: "Fullscreen Error",
-            description: "Could not exit fullscreen mode.",
+            title: t("learning.video.fullscreenError"),
+            description: t("learning.video.fullscreenExitErrorDesc"),
             variant: "destructive",
           });
         });
@@ -271,9 +308,8 @@ const LearningCenter = () => {
         // Allow 1 second buffer
         videoRef.current.currentTime = maxTime;
         toast({
-          title: "Navigation Restricted",
-          description:
-            "You can only navigate to parts of the video you've already watched.",
+          title: t("learning.video.restricted"),
+          description: t("learning.video.restrictedDesc"),
           variant: "destructive",
         });
       } else if (currentTime > maxTime) {
@@ -300,8 +336,8 @@ const LearningCenter = () => {
   const handleQuizSubmit = () => {
     if (selectedAnswer === null) {
       toast({
-        title: "Please select an answer",
-        description: "You need to choose an option before submitting.",
+        title: t("learning.quiz.select"),
+        description: t("learning.quiz.selectDesc"),
         variant: "destructive",
       });
       return;
@@ -323,10 +359,10 @@ const LearningCenter = () => {
       } else {
         setQuizCompleted(true);
         toast({
-          title: "Quiz Completed!",
-          description: `You scored ${quizScore + (isCorrect ? 1 : 0)}/${
-            quizQuestions.length
-          }`,
+          title: t("common.success"),
+          description: t("learning.quiz.score")
+            .replace("{score}", (quizScore + (isCorrect ? 1 : 0)).toString())
+            .replace("{total}", quizQuestions.length.toString()),
           duration: 5000,
         });
       }
@@ -351,8 +387,8 @@ const LearningCenter = () => {
     // Only admins can upload resources
     if (!isAdmin) {
       toast({
-        title: "Access Denied",
-        description: "Only administrators can upload resources.",
+        title: t("learning.resources.accessDenied"),
+        description: t("learning.resources.accessDeniedDesc"),
         variant: "destructive",
       });
       return;
@@ -360,8 +396,8 @@ const LearningCenter = () => {
 
     if (!newResource.title || !newResource.description) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields for the resource.",
+        title: t("learning.resources.missingInfo"),
+        description: t("learning.resources.missingInfoDesc"),
         variant: "destructive",
       });
       return;
@@ -374,8 +410,8 @@ const LearningCenter = () => {
       resourceUrl = URL.createObjectURL(selectedFile);
     } else if (!newResource.url) {
       toast({
-        title: "Missing File or URL",
-        description: "Please either select a file or provide a URL.",
+        title: t("learning.resources.missingFile"),
+        description: t("learning.resources.missingFileDesc"),
         variant: "destructive",
       });
       return;
@@ -402,8 +438,8 @@ const LearningCenter = () => {
     }
 
     toast({
-      title: "Resource Added!",
-      description: "Your learning resource has been added successfully.",
+      title: t("learning.resources.added"),
+      description: t("learning.resources.addedDesc"),
     });
   };
 
@@ -430,11 +466,10 @@ const LearningCenter = () => {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-4">
-              Learning Center
+              {t("learning.title")}
             </h1>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Master CSS Battle with our tutorials, quizzes, and learning
-              resources
+              {t("learning.subtitle")}
             </p>
           </div>
 
@@ -444,7 +479,7 @@ const LearningCenter = () => {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Play className="w-5 h-5 mr-2 text-battle-purple" />
-                  Video Tutorial
+                  {t("learning.video.title")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -459,7 +494,9 @@ const LearningCenter = () => {
                       controls={false}
                     >
                       <source src="/tutorial-video.mp4" type="video/mp4" />
-                      Your browser does not support the video tag.
+                      {language === "en"
+                        ? "Your browser does not support the video tag."
+                        : "Votre navigateur ne prend pas en charge la balise vidéo."}
                     </video>
 
                     {/* Video Overlay Controls */}
@@ -494,7 +531,7 @@ const LearningCenter = () => {
                         <div className="text-center bg-black/70 p-4 rounded-lg">
                           <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-2" />
                           <p className="text-white font-medium">
-                            Video Completed!
+                            {t("learning.video.completed")}
                           </p>
                         </div>
                       )}
@@ -507,7 +544,9 @@ const LearningCenter = () => {
                         <CheckCircle className="w-5 h-5 text-green-500" />
                       )}
                       <span className="text-sm text-muted-foreground">
-                        {videoCompleted ? "Completed" : "Not completed"}
+                        {videoCompleted
+                          ? t("learning.video.completed")
+                          : t("learning.video.notCompleted")}
                       </span>
                     </div>
 
@@ -519,7 +558,7 @@ const LearningCenter = () => {
                         className="border-battle-purple/50 hover:bg-battle-purple/10"
                       >
                         <RotateCcw className="w-4 h-4 mr-2" />
-                        Reset
+                        {t("learning.video.reset")}
                       </Button>
                     </div>
                   </div>
@@ -532,17 +571,18 @@ const LearningCenter = () => {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Trophy className="w-5 h-5 mr-2 text-battle-purple" />
-                  Knowledge Check
+                  {t("learning.quiz.title")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {!videoCompleted ? (
                   <div className="text-center py-8">
                     <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-                    <h3 className="text-2xl font-bold mb-2">Video Required</h3>
+                    <h3 className="text-2xl font-bold mb-2">
+                      {t("learning.quiz.videoRequired")}
+                    </h3>
                     <p className="text-muted-foreground mb-6">
-                      Please complete the video tutorial first to unlock the
-                      quiz.
+                      {t("learning.quiz.videoRequiredDesc")}
                     </p>
                     <Button
                       onClick={() => {
@@ -554,31 +594,40 @@ const LearningCenter = () => {
                       }}
                       className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
                     >
-                      Watch Video
+                      {t("learning.quiz.watchVideo")}
                     </Button>
                   </div>
                 ) : quizCompleted ? (
                   <div className="text-center py-8">
                     <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-                    <h3 className="text-2xl font-bold mb-2">Quiz Completed!</h3>
+                    <h3 className="text-2xl font-bold mb-2">
+                      {t("learning.quiz.completed")}
+                    </h3>
                     <p className="text-muted-foreground mb-6">
-                      You scored {quizScore}/{quizQuestions.length}
+                      {t("learning.quiz.score")
+                        .replace("{score}", quizScore.toString())
+                        .replace("{total}", quizQuestions.length.toString())}
                     </p>
                     <Button
                       onClick={resetQuiz}
                       className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
                     >
-                      Retake Quiz
+                      {t("learning.quiz.retake")}
                     </Button>
                   </div>
                 ) : (
                   <div className="space-y-6">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">
-                        Question {currentQuestion + 1} of {quizQuestions.length}
+                        {t("learning.quiz.question")
+                          .replace(
+                            "{current}",
+                            (currentQuestion + 1).toString()
+                          )
+                          .replace("{total}", quizQuestions.length.toString())}
                       </span>
                       <span className="text-sm font-medium">
-                        Score: {quizScore}
+                        {t("common.continue")}: {quizScore}
                       </span>
                     </div>
 
@@ -674,8 +723,8 @@ const LearningCenter = () => {
                               >
                                 {selectedAnswer ===
                                 quizQuestions[currentQuestion].correctAnswer
-                                  ? "Correct!"
-                                  : "Incorrect"}
+                                  ? t("learning.quiz.correct")
+                                  : t("learning.quiz.incorrect")}
                               </p>
                               <p className="text-sm text-muted-foreground mt-1">
                                 {quizQuestions[currentQuestion].explanation}
@@ -691,7 +740,9 @@ const LearningCenter = () => {
                       disabled={selectedAnswer === null && !showResult}
                       className="w-full bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
                     >
-                      {showResult ? "Next Question" : "Submit Answer"}
+                      {showResult
+                        ? t("learning.quiz.next")
+                        : t("learning.quiz.submit")}
                     </Button>
                   </div>
                 )}
@@ -705,7 +756,7 @@ const LearningCenter = () => {
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center">
                   <BookOpen className="w-5 h-5 mr-2 text-battle-purple" />
-                  Learning Resources
+                  {t("learning.resources.title")}
                 </div>
                 {isAdmin && (
                   <Button
@@ -717,7 +768,7 @@ const LearningCenter = () => {
                     className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow text-xs h-8"
                   >
                     <Upload className="w-4 h-4 mr-1" />
-                    Add Resource
+                    {t("learning.resources.add")}
                   </Button>
                 )}
               </CardTitle>
@@ -749,9 +800,14 @@ const LearningCenter = () => {
                               } else {
                                 // In a real implementation, this would download the file
                                 toast({
-                                  title: "Resource Access",
+                                  title:
+                                    t("common.continue") +
+                                    " " +
+                                    t("learning.resources.title"),
                                   description:
-                                    "In a real implementation, this would download or open the resource.",
+                                    language === "en"
+                                      ? "In a real implementation, this would download or open the resource."
+                                      : "Dans une implémentation réelle, cela téléchargerait ou ouvrirait la ressource.",
                                 });
                               }
                             }}
@@ -759,12 +815,12 @@ const LearningCenter = () => {
                             {resource.type === "link" ? (
                               <>
                                 <ExternalLink className="w-3 h-3 mr-1" />
-                                Open
+                                {t("common.view")}
                               </>
                             ) : (
                               <>
                                 <Download className="w-3 h-3 mr-1" />
-                                Download
+                                {t("common.download")}
                               </>
                             )}
                           </Button>
@@ -780,11 +836,13 @@ const LearningCenter = () => {
                 <div id="resource-form" className="border-t border-border pt-6">
                   <h3 className="text-lg font-semibold mb-4 flex items-center">
                     <Lightbulb className="w-5 h-5 mr-2 text-battle-purple" />
-                    Add New Resource
+                    {t("learning.resources.form.title")}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="title">Title *</Label>
+                      <Label htmlFor="title">
+                        {t("learning.resources.form.titleLabel")}
+                      </Label>
                       <Input
                         id="title"
                         value={newResource.title}
@@ -794,12 +852,18 @@ const LearningCenter = () => {
                             title: e.target.value,
                           })
                         }
-                        placeholder="Resource title"
+                        placeholder={
+                          language === "en"
+                            ? "Resource title"
+                            : "Titre de la ressource"
+                        }
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="type">Resource Type</Label>
+                      <Label htmlFor="type">
+                        {t("learning.resources.form.typeLabel")}
+                      </Label>
                       <select
                         id="type"
                         value={newResource.type}
@@ -814,17 +878,36 @@ const LearningCenter = () => {
                           })
                         }
                         className="w-full p-2 border rounded-md bg-background border-border"
-                        aria-label="Resource type"
+                        aria-label={
+                          language === "en"
+                            ? "Resource type"
+                            : "Type de ressource"
+                        }
+                        title={
+                          language === "en"
+                            ? "Resource type"
+                            : "Type de ressource"
+                        }
                       >
-                        <option value="pdf">PDF Document</option>
-                        <option value="doc">Document</option>
-                        <option value="video">Video</option>
-                        <option value="link">External Link</option>
+                        <option value="pdf">
+                          {language === "en" ? "PDF Document" : "Document PDF"}
+                        </option>
+                        <option value="doc">
+                          {language === "en" ? "Document" : "Document"}
+                        </option>
+                        <option value="video">
+                          {language === "en" ? "Video" : "Vidéo"}
+                        </option>
+                        <option value="link">
+                          {language === "en" ? "External Link" : "Lien Externe"}
+                        </option>
                       </select>
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="description">Description *</Label>
+                      <Label htmlFor="description">
+                        {t("learning.resources.form.descLabel")}
+                      </Label>
                       <Textarea
                         id="description"
                         value={newResource.description}
@@ -834,13 +917,19 @@ const LearningCenter = () => {
                             description: e.target.value,
                           })
                         }
-                        placeholder="Brief description of the resource"
+                        placeholder={
+                          language === "en"
+                            ? "Brief description of the resource"
+                            : "Brève description de la ressource"
+                        }
                         rows={2}
                       />
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="file">Upload File (Optional)</Label>
+                      <Label htmlFor="file">
+                        {t("learning.resources.form.fileLabel")}
+                      </Label>
                       <Input
                         ref={fileInputRef}
                         id="file"
@@ -852,7 +941,7 @@ const LearningCenter = () => {
 
                     <div className="space-y-2 md:col-span-2">
                       <Label htmlFor="url">
-                        URL (Required if no file uploaded)
+                        {t("learning.resources.form.urlLabel")}
                       </Label>
                       <Input
                         id="url"
@@ -863,7 +952,11 @@ const LearningCenter = () => {
                             url: e.target.value,
                           })
                         }
-                        placeholder="https://example.com/resource or file path"
+                        placeholder={
+                          language === "en"
+                            ? "https://example.com/resource or file path"
+                            : "https://exemple.com/ressource ou chemin du fichier"
+                        }
                       />
                     </div>
 
@@ -873,7 +966,7 @@ const LearningCenter = () => {
                         className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
                       >
                         <Upload className="w-4 h-4 mr-2" />
-                        Add Resource
+                        {t("common.upload")}
                       </Button>
                     </div>
                   </div>
@@ -883,9 +976,9 @@ const LearningCenter = () => {
               {!isAdmin && (
                 <div className="text-center py-6 text-muted-foreground">
                   <Lock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>Only administrators can add new learning resources.</p>
+                  <p>{t("learning.resources.adminOnly")}</p>
                   <p className="text-sm mt-1">
-                    Players can only view and download existing resources.
+                    {t("learning.resources.playerInfo")}
                   </p>
                 </div>
               )}
