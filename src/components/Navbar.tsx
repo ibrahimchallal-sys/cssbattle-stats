@@ -1,5 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Menu, X, User as UserIcon, Sun, Moon, CloudSun } from "lucide-react";
+import {
+  Menu,
+  X,
+  User as UserIcon,
+  Sun,
+  Moon,
+  CloudSun,
+  LogOut,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,43 +19,72 @@ const Navbar = () => {
   const { themePreference, appliedTheme, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { admin, isAdmin } = useAdmin();
+  const { user, logout: userLogout } = useAuth();
+  const { admin, isAdmin, logout: adminLogout } = useAdmin();
 
   // Debug: Log authentication states
   useEffect(() => {
     console.log("Navbar - Auth states:", { user, admin, isAdmin });
-    console.log("Navbar - User details:", user ? {
-      id: user.id,
-      email: user.email,
-      full_name: user.full_name
-    } : "No user");
+    console.log(
+      "Navbar - User details:",
+      user
+        ? {
+            id: user.id,
+            email: user.email,
+            full_name: user.full_name,
+          }
+        : "No user"
+    );
   }, [user, admin, isAdmin]);
 
   const getThemeIcon = () => {
-    if (themePreference === 'auto') {
+    if (themePreference === "auto") {
       return <CloudSun className="h-5 w-5" />;
     }
-    return appliedTheme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />;
+    return appliedTheme === "dark" ? (
+      <Sun className="h-5 w-5" />
+    ) : (
+      <Moon className="h-5 w-5" />
+    );
   };
 
   const getThemeLabel = () => {
-    if (themePreference === 'auto') return 'Auto';
-    return appliedTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
+    if (themePreference === "auto") return "Auto";
+    return appliedTheme === "dark" ? "Light Mode" : "Dark Mode";
   };
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
-  // Build nav links dynamically based on admin status
-  const navLinks = isAdmin 
-    ? [
-        { name: "Home", href: "/" },
-        { name: "Leaderboard", href: "/leaderboard" },
-        { name: "Dashboard", href: "/admin/dashboard" },
-        { name: "Messages", href: "/admin/messages" },
-      ]
+  const handleAdminLogout = async () => {
+    await adminLogout();
+    navigate("/admin");
+  };
+
+  const handleUserLogout = async () => {
+    await userLogout();
+    navigate("/");
+  };
+
+  // Build nav links dynamically based on user status
+  const getPlayerNavLinks = () => [
+    { name: "Home", href: "/" },
+    { name: "Leaderboard", href: "/leaderboard" },
+    { name: "Contact", href: "/contact" },
+  ];
+
+  const getAdminNavLinks = () => [
+    { name: "Home", href: "/" },
+    { name: "Leaderboard", href: "/leaderboard" },
+    { name: "Dashboard", href: "/admin/dashboard" },
+    { name: "Messages", href: "/admin/messages" },
+  ];
+
+  const navLinks = isAdmin
+    ? getAdminNavLinks()
+    : user
+    ? getPlayerNavLinks()
     : [
         { name: "Home", href: "/" },
         { name: "Leaderboard", href: "/leaderboard" },
@@ -61,13 +98,13 @@ const Navbar = () => {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex-shrink-0">
-              <img 
-                src="/ofppt logo.png" 
-                alt="OFPPT Logo" 
+              <img
+                src="/ofppt logo.png"
+                alt="OFPPT Logo"
                 className="h-10 w-auto"
               />
             </div>
-            
+
             {/* Institute Name */}
             <div className="flex-1 text-center px-2">
               <span className="text-xs font-medium text-foreground">
@@ -92,7 +129,11 @@ const Navbar = () => {
                 onClick={toggleMenu}
                 className="text-foreground hover:bg-battle-purple/10"
               >
-                {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                {isMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
               </Button>
             </div>
           </div>
@@ -102,9 +143,9 @@ const Navbar = () => {
         <div className="hidden md:flex items-center justify-between h-16">
           {/* Logo and Institute Name */}
           <div className="flex-shrink-0 flex items-center">
-            <img 
-              src="/ofppt logo.png" 
-              alt="OFPPT Logo" 
+            <img
+              src="/ofppt logo.png"
+              alt="OFPPT Logo"
               className="h-10 w-auto"
             />
             <span className="ml-3 text-sm font-medium text-foreground">
@@ -119,8 +160,8 @@ const Navbar = () => {
                 key={link.name}
                 to={link.href}
                 className={`${
-                  location.pathname === link.href 
-                    ? "text-foreground font-bold" 
+                  location.pathname === link.href
+                    ? "text-foreground font-bold"
                     : "text-foreground/80 hover:text-foreground"
                 } transition-colors font-medium`}
               >
@@ -141,39 +182,58 @@ const Navbar = () => {
               {getThemeIcon()}
             </Button>
             <div className="flex items-center space-x-2">
-              {isAdmin && !user && (
+              {isAdmin && (
                 <Button
-                  onClick={() => navigate("/login")}
+                  onClick={handleAdminLogout}
                   variant="outline"
                   size="sm"
-                  className="border-battle-purple/50 hover:bg-battle-purple/10 text-xs"
+                  className="border-red-500/50 hover:bg-red-500/10 text-xs flex items-center"
                 >
-                  Login as Player
+                  <LogOut className="w-3 h-3 mr-1" />
+                  Logout
                 </Button>
               )}
               {user ? (
-                <div 
-                  className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
-                  onClick={() => navigate("/profile")}
-                >
-                  <UserIcon className="w-5 h-5 text-foreground" />
-                </div>
-              ) : !isAdmin && (
-                <>
-                  <Button 
+                <div className="flex items-center space-x-2">
+                  <div
+                    className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
+                    onClick={() => navigate("/profile")}
+                  >
+                    <UserIcon className="w-5 h-5 text-foreground" />
+                  </div>
+                  <Button
+                    onClick={handleUserLogout}
                     variant="outline"
-                    onClick={() => navigate("/login")}
-                    className="border-battle-purple/50 hover:bg-battle-purple/10"
+                    size="sm"
+                    className="border-red-500/50 hover:bg-red-500/10 text-xs flex items-center"
                   >
-                    Log in
+                    <LogOut className="w-3 h-3 mr-1" />
+                    Logout
                   </Button>
-                  <Button 
-                    onClick={() => window.open("https://css-battle-isfo.vercel.app/", "_blank")}
-                    className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
-                  >
-                    S'inscrire
-                  </Button>
-                </>
+                </div>
+              ) : (
+                !isAdmin && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate("/login")}
+                      className="border-battle-purple/50 hover:bg-battle-purple/10"
+                    >
+                      Log in
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        window.open(
+                          "https://css-battle-isfo.vercel.app/",
+                          "_blank"
+                        )
+                      }
+                      className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
+                    >
+                      S'inscrire
+                    </Button>
+                  </>
+                )
               )}
             </div>
           </div>
@@ -188,8 +248,8 @@ const Navbar = () => {
                   key={link.name}
                   to={link.href}
                   className={`${
-                    location.pathname === link.href 
-                      ? "text-foreground font-bold" 
+                    location.pathname === link.href
+                      ? "text-foreground font-bold"
                       : "text-foreground/80 hover:text-foreground"
                   } transition-colors font-medium px-2 py-1`}
                   onClick={() => setIsMenuOpen(false)}
@@ -200,7 +260,7 @@ const Navbar = () => {
               <div className="flex flex-col space-y-2 pt-4">
                 {user ? (
                   <>
-                    <div 
+                    <div
                       className="flex items-center space-x-2 cursor-pointer"
                       onClick={() => {
                         navigate("/profile");
@@ -212,6 +272,18 @@ const Navbar = () => {
                       </div>
                       <span className="text-foreground">{user.full_name}</span>
                     </div>
+                    <Button
+                      onClick={() => {
+                        handleUserLogout();
+                        setIsMenuOpen(false);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-red-500/50 hover:bg-red-500/10 flex items-center"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Logout
+                    </Button>
                     <Button
                       onClick={() => {
                         toggleTheme();
@@ -228,14 +300,15 @@ const Navbar = () => {
                   <>
                     <Button
                       onClick={() => {
-                        navigate("/login");
+                        handleAdminLogout();
                         setIsMenuOpen(false);
                       }}
                       variant="outline"
                       size="sm"
-                      className="w-full border-battle-purple/50 hover:bg-battle-purple/10"
+                      className="w-full border-red-500/50 hover:bg-red-500/10 flex items-center"
                     >
-                      Login as Player
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Logout
                     </Button>
                     <Button
                       onClick={() => {
@@ -251,7 +324,7 @@ const Navbar = () => {
                   </>
                 ) : (
                   <>
-                    <Button 
+                    <Button
                       variant="outline"
                       onClick={() => {
                         navigate("/login");
@@ -261,9 +334,12 @@ const Navbar = () => {
                     >
                       Log in
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => {
-                        window.open("https://css-battle-isfo.vercel.app/", "_blank");
+                        window.open(
+                          "https://css-battle-isfo.vercel.app/",
+                          "_blank"
+                        );
                         setIsMenuOpen(false);
                       }}
                       className="w-full bg-gradient-primary hover:scale-105 transition-transform shadow-glow"

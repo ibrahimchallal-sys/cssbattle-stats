@@ -4,20 +4,37 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Mail, MailOpen, Calendar, User } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowLeft, Mail, MailOpen, Calendar, User, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/contexts/AdminContext";
 
 interface ContactMessage {
   id: string;
+  sender_id: string;
   sender_name: string;
   sender_email: string;
   recipient_email: string;
   subject: string;
   message: string;
-  status: 'unread' | 'read' | 'replied';
+  status: "unread" | "read" | "replied";
   created_at: string;
+}
+
+interface Player {
+  id: string;
+  full_name: string;
+  email: string;
+  group_name: string | null;
+  score: number;
+  cssbattle_profile_link: string | null;
+  phone: string | null;
 }
 
 const AdminMessages = () => {
@@ -26,8 +43,8 @@ const AdminMessages = () => {
   const { admin, isAdmin, loading: adminLoading } = useAdmin();
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
- 
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
   useEffect(() => {
     if (adminLoading) return; // wait for admin context to init
     if (!isAdmin) {
@@ -42,14 +59,14 @@ const AdminMessages = () => {
       if (!admin) return;
 
       const { data, error } = await supabase
-        .from('contact_messages')
-        .select('*')
-        .eq('recipient_email', admin.email)
-        .order('created_at', { ascending: false });
+        .from("contact_messages")
+        .select("*")
+        .eq("recipient_email", admin.email)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      setMessages(data as ContactMessage[] || []);
+      setMessages((data as ContactMessage[]) || []);
     } catch (error) {
       toast({
         title: "Error",
@@ -64,9 +81,9 @@ const AdminMessages = () => {
   const handleMarkAsRead = async (messageId: string) => {
     try {
       const { error } = await supabase
-        .from('contact_messages' as any)
-        .update({ status: 'read', updated_at: new Date().toISOString() })
-        .eq('id', messageId);
+        .from("contact_messages")
+        .update({ status: "read", updated_at: new Date().toISOString() })
+        .eq("id", messageId);
 
       if (error) throw error;
 
@@ -85,8 +102,13 @@ const AdminMessages = () => {
     }
   };
 
-  const filteredMessages = messages.filter(msg => 
-    statusFilter === 'all' || msg.status === statusFilter
+  const handleViewPlayerDetails = (playerId: string) => {
+    // Navigate to player profile page
+    navigate(`/admin/player/${playerId}`);
+  };
+
+  const filteredMessages = messages.filter(
+    (msg) => statusFilter === "all" || msg.status === statusFilter
   );
 
   if (loading) {
@@ -109,11 +131,9 @@ const AdminMessages = () => {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
-          
-          <h1 className="text-3xl font-bold text-foreground">
-            My Messages
-          </h1>
-          
+
+          <h1 className="text-3xl font-bold text-foreground">My Messages</h1>
+
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-40 bg-background border-primary/30">
               <SelectValue placeholder="Filter by status" />
@@ -135,10 +155,13 @@ const AdminMessages = () => {
         ) : (
           <div className="space-y-4">
             {filteredMessages.map((message) => (
-              <Card key={message.id} className="p-6 hover:shadow-lg transition-shadow">
+              <Card
+                key={message.id}
+                className="p-6 hover:shadow-lg transition-shadow"
+              >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    {message.status === 'unread' ? (
+                    {message.status === "unread" ? (
                       <Mail className="w-5 h-5 text-primary" />
                     ) : (
                       <MailOpen className="w-5 h-5 text-muted-foreground" />
@@ -154,10 +177,12 @@ const AdminMessages = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-col items-end gap-2">
-                    <Badge 
-                      variant={message.status === 'unread' ? 'default' : 'secondary'}
+                    <Badge
+                      variant={
+                        message.status === "unread" ? "default" : "secondary"
+                      }
                     >
                       {message.status}
                     </Badge>
@@ -169,20 +194,33 @@ const AdminMessages = () => {
                 </div>
 
                 <div className="p-4 bg-muted/30 rounded-lg mb-4">
-                  <p className="text-foreground whitespace-pre-wrap">{message.message}</p>
+                  <p className="text-foreground whitespace-pre-wrap">
+                    {message.message}
+                  </p>
                 </div>
 
-                {message.status === 'unread' && (
+                <div className="flex gap-2">
+                  {message.status === "unread" && (
+                    <Button
+                      onClick={() => handleMarkAsRead(message.id)}
+                      variant="outline"
+                      size="sm"
+                      className="border-primary/50"
+                    >
+                      <MailOpen className="w-4 h-4 mr-2" />
+                      Mark as Read
+                    </Button>
+                  )}
                   <Button
-                    onClick={() => handleMarkAsRead(message.id)}
+                    onClick={() => handleViewPlayerDetails(message.sender_id)}
                     variant="outline"
                     size="sm"
-                    className="border-primary/50"
+                    className="border-battle-purple/50 hover:bg-battle-purple/10"
                   >
-                    <MailOpen className="w-4 h-4 mr-2" />
-                    Mark as Read
+                    <Eye className="w-4 h-4 mr-2" />
+                    View Player Details
                   </Button>
-                )}
+                </div>
               </Card>
             ))}
           </div>

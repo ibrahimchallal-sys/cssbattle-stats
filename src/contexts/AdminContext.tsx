@@ -1,6 +1,14 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import type { User } from '@supabase/supabase-js';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { User } from "@supabase/supabase-js";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { safeLocalStorage } from "@/lib/storage";
 
 interface AdminContextType {
   admin: User | null;
@@ -21,8 +29,8 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
     const checkAdminStatus = async () => {
       try {
-        const hardcodedAdmin = localStorage.getItem('hardcoded_admin');
-        
+        const hardcodedAdmin = safeLocalStorage.getItem("hardcoded_admin");
+
         if (hardcodedAdmin) {
           const adminData = JSON.parse(hardcodedAdmin);
           if (mounted) {
@@ -33,36 +41,15 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
 
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user && mounted) {
-          // Check if user has admin role
-          const { data: roleData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', session.user.id)
-            .eq('role', 'admin')
-            .single();
-
-          if (roleData) {
-            setAdmin(session.user);
-            setIsAdmin(true);
-          } else {
-            setAdmin(null);
-            setIsAdmin(false);
-          }
-        } else if (mounted) {
-          setAdmin(null);
-          setIsAdmin(false);
+        // For regular admin checking, we'll rely on the auth listener
+        if (mounted) {
+          setLoading(false);
         }
       } catch (error) {
-        console.error('Error checking admin status:', error);
+        console.error("Error checking admin status:", error);
         if (mounted) {
           setAdmin(null);
           setIsAdmin(false);
-        }
-      } finally {
-        if (mounted) {
           setLoading(false);
         }
       }
@@ -70,30 +57,50 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
     checkAdminStatus();
 
-    // Listen for auth changes - but don't interfere with regular user auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
-      
+
       // Check for hardcoded admin first
-      const hardcodedAdmin = localStorage.getItem('hardcoded_admin');
+      const hardcodedAdmin = safeLocalStorage.getItem("hardcoded_admin");
       if (hardcodedAdmin) {
-        return; // Don't process regular auth if hardcoded admin exists
+        try {
+          const adminData = JSON.parse(hardcodedAdmin);
+          if (mounted) {
+            setAdmin(adminData as User);
+            setIsAdmin(true);
+          }
+          return;
+        } catch (error) {
+          console.error("Error parsing hardcoded admin:", error);
+          safeLocalStorage.removeItem("hardcoded_admin");
+        }
       }
 
       if (session?.user) {
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .eq('role', 'admin')
-          .single();
+        try {
+          const { data: roleData, error } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .eq("role", "admin")
+            .single();
 
-        if (roleData && mounted) {
-          setAdmin(session.user);
-          setIsAdmin(true);
-        } else if (mounted) {
-          setAdmin(null);
-          setIsAdmin(false);
+          if (!error && roleData && mounted) {
+            setAdmin(session.user);
+            setIsAdmin(true);
+          } else if (mounted) {
+            setAdmin(null);
+            setIsAdmin(false);
+          }
+        } catch (error) {
+          console.error("Error checking admin role:", error);
+          if (mounted) {
+            setAdmin(null);
+            setIsAdmin(false);
+          }
         }
       } else if (mounted) {
         setAdmin(null);
@@ -103,16 +110,22 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      if (subscription?.unsubscribe) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 
   const logout = async () => {
-    localStorage.removeItem('hardcoded_admin');
-    await supabase.auth.signOut();
+    safeLocalStorage.removeItem("hardcoded_admin");
     setAdmin(null);
     setIsAdmin(false);
   };
+
+  // Always render children, but show loading spinner during initialization
+  if (loading) {
+    return <LoadingSpinner message="Initializing admin..." />;
+  }
 
   return (
     <AdminContext.Provider value={{ admin, isAdmin, loading, logout }}>
@@ -124,7 +137,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 export const useAdmin = () => {
   const context = useContext(AdminContext);
   if (context === undefined) {
-    throw new Error('useAdmin must be used within an AdminProvider');
+    throw new Error("useAdmin must be used within an AdminProvider");
   }
   return context;
 };

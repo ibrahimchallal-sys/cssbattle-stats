@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/contexts/AdminContext";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+const PlayerProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
 
@@ -12,23 +14,25 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     // Give auth context time to initialize
     const timer = setTimeout(() => {
       setChecking(false);
-      if (!user) {
-        navigate("/login");
+      // Allow access if user is a player (not admin)
+      if (!user || isAdmin) {
+        navigate("/");
       }
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [user, navigate]);
+  }, [user, isAdmin, navigate]);
 
   if (checking) {
     return <LoadingSpinner message="Loading..." />;
   }
 
-  if (!user) {
+  // Allow access only if user is authenticated and not an admin
+  if (!user || isAdmin) {
     return null;
   }
 
   return <>{children}</>;
 };
 
-export default ProtectedRoute;
+export default PlayerProtectedRoute;

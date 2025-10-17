@@ -1,15 +1,38 @@
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import Navbar from "@/components/Navbar";
 import { Mail, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+
+// Define the type for contact messages
+interface ContactMessage {
+  sender_id: string;
+  sender_name: string;
+  sender_email: string;
+  recipient_email: string;
+  subject: string;
+  message: string;
+  status: "unread" | "read";
+}
 
 export default function Contact() {
   const { user } = useAuth();
@@ -18,7 +41,7 @@ export default function Contact() {
     fullName: user?.full_name || "",
     recipient: "",
     subject: "",
-    message: ""
+    message: "",
   });
   const [loading, setLoading] = useState(false);
 
@@ -27,25 +50,25 @@ export default function Contact() {
       name: "ABDEL MONEIM MAGOURA",
       role: "Stagiaire",
       cohort: "DEVOWS 203",
-      email: "abdelmoneim@admincss.com"
+      email: "abdelmoneim@admincss.com",
     },
     {
       name: "IBRAHIM CHALLAL",
       role: "Stagiaire",
       cohort: "DEVOWS 203",
-      email: "ibrahimchallal@admincss.com"
+      email: "ibrahimchallal@admincss.com",
     },
     {
       name: "YOUNESS HLIBI",
       role: "Stagiaire",
       cohort: "DEVOWS 201",
-      email: "younesshlibi@admincss.com"
+      email: "younesshlibi@admincss.com",
     },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user) {
       toast({
         title: "Error",
@@ -68,16 +91,16 @@ export default function Contact() {
 
     try {
       const { error } = await supabase
-        .from('contact_messages' as any)
-        .insert({
+        .from("contact_messages")
+        .insert<ContactMessage>({
           sender_id: user.id,
           sender_name: formData.fullName,
           sender_email: user.email,
           recipient_email: formData.recipient,
           subject: formData.subject,
           message: formData.message,
-          status: 'unread'
-        });
+          status: "unread",
+        } as never);
 
       if (error) throw error;
 
@@ -91,7 +114,7 @@ export default function Contact() {
         fullName: user.full_name || "",
         recipient: "",
         subject: "",
-        message: ""
+        message: "",
       });
     } catch (error) {
       toast({
@@ -109,7 +132,9 @@ export default function Contact() {
       <Navbar />
       <main className="container mx-auto px-4 py-24">
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">Contact</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">
+            Contact
+          </h1>
           <p className="text-lg text-foreground/80 max-w-2xl mx-auto">
             Meet our team members and send them a message
           </p>
@@ -118,12 +143,14 @@ export default function Contact() {
         {/* Team Members Grid - 3 columns */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 max-w-5xl mx-auto">
           {teamMembers.map((member, index) => (
-            <Card 
-              key={index} 
+            <Card
+              key={index}
               className="bg-card/50 backdrop-blur-sm border-primary/30 hover:scale-105 transition-transform hover:shadow-lg"
             >
               <CardHeader>
-                <CardTitle className="text-xl text-foreground text-center">{member.name}</CardTitle>
+                <CardTitle className="text-xl text-foreground text-center">
+                  {member.name}
+                </CardTitle>
                 <CardDescription className="text-primary text-center">
                   {member.role}
                 </CardDescription>
@@ -136,8 +163,8 @@ export default function Contact() {
                   {member.email !== "X" && (
                     <div className="flex items-center text-sm text-foreground/80">
                       <Mail className="w-4 h-4 mr-2" />
-                      <a 
-                        href={`mailto:${member.email}`} 
+                      <a
+                        href={`mailto:${member.email}`}
                         className="hover:text-primary transition-colors text-center break-all"
                       >
                         {member.email}
@@ -151,97 +178,93 @@ export default function Contact() {
         </div>
 
         {/* Contact Form */}
-        {user ? (
-          <Card className="max-w-3xl mx-auto bg-card/50 backdrop-blur-sm border-primary/30">
-            <CardHeader>
-              <CardTitle className="text-2xl text-center">Send a Message</CardTitle>
-              <CardDescription className="text-center">
-                Choose a team member and send them a message
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Your Name</Label>
-                  <Input
-                    id="fullName"
-                    value={formData.fullName}
-                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    className="bg-background/50 border-primary/30"
-                    required
-                  />
-                </div>
+        <Card className="max-w-3xl mx-auto bg-card/50 backdrop-blur-sm border-primary/30">
+          <CardHeader>
+            <CardTitle className="text-2xl text-center">
+              Send a Message
+            </CardTitle>
+            <CardDescription className="text-center">
+              Choose a team member and send them a message
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Your Name</Label>
+                <Input
+                  id="fullName"
+                  value={formData.fullName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, fullName: e.target.value })
+                  }
+                  className="bg-background/50 border-primary/30"
+                  required
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="recipient">Select Recipient</Label>
-                  <Select 
-                    value={formData.recipient} 
-                    onValueChange={(value) => setFormData({ ...formData, recipient: value })}
-                  >
-                    <SelectTrigger className="bg-background/50 border-primary/30">
-                      <SelectValue placeholder="Choose a team member" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teamMembers.filter(m => m.email !== "X").map((member, index) => (
+              <div className="space-y-2">
+                <Label htmlFor="recipient">Select Recipient</Label>
+                <Select
+                  value={formData.recipient}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, recipient: value })
+                  }
+                >
+                  <SelectTrigger className="bg-background/50 border-primary/30">
+                    <SelectValue placeholder="Choose a team member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamMembers
+                      .filter((m) => m.email !== "X")
+                      .map((member, index) => (
                         <SelectItem key={index} value={member.email}>
                           {member.name}
                         </SelectItem>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Subject</Label>
-                  <Input
-                    id="subject"
-                    value={formData.subject}
-                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    placeholder="Enter message subject"
-                    className="bg-background/50 border-primary/30"
-                    required
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="subject">Subject</Label>
+                <Input
+                  id="subject"
+                  value={formData.subject}
+                  onChange={(e) =>
+                    setFormData({ ...formData, subject: e.target.value })
+                  }
+                  placeholder="Enter message subject"
+                  className="bg-background/50 border-primary/30"
+                  required
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="message">Message</Label>
-                  <Textarea
-                    id="message"
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    placeholder="Type your message here..."
-                    rows={6}
-                    className="bg-background/50 border-primary/30 resize-none"
-                    required
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="message">Message</Label>
+                <Textarea
+                  id="message"
+                  value={formData.message}
+                  onChange={(e) =>
+                    setFormData({ ...formData, message: e.target.value })
+                  }
+                  placeholder="Type your message here..."
+                  rows={6}
+                  className="bg-background/50 border-primary/30 resize-none"
+                  required
+                />
+              </div>
 
-                <Button 
-                  type="submit" 
-                  className="w-full bg-gradient-to-r from-primary to-accent hover:scale-105 transition-transform"
-                  disabled={loading}
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  {loading ? "Sending..." : "Send Message"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="max-w-3xl mx-auto bg-card/50 backdrop-blur-sm border-primary/30">
-            <CardContent className="p-12 text-center">
-              <p className="text-lg text-foreground/80 mb-4">
-                Please log in to send messages to our team members
-              </p>
-              <Button 
-                onClick={() => window.location.href = '/login'}
-                className="bg-gradient-to-r from-primary to-accent"
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-primary to-accent hover:scale-105 transition-transform"
+                disabled={loading}
               >
-                Log In
+                <Send className="w-4 h-4 mr-2" />
+                {loading ? "Sending..." : "Send Message"}
               </Button>
-            </CardContent>
-          </Card>
-        )}
+            </form>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );

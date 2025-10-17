@@ -7,17 +7,20 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { Mail, Lock, ArrowLeft, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const navigate = useNavigate();
   const { login, user } = useAuth();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     email: "",
-    password: ""
+    password: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showEmailVerificationMessage, setShowEmailVerificationMessage] = useState(false);
+  const [showEmailVerificationMessage, setShowEmailVerificationMessage] =
+    useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -28,9 +31,9 @@ const Login = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -39,14 +42,19 @@ const Login = () => {
     setIsSubmitting(true);
     setError(null);
     setShowEmailVerificationMessage(false);
-    
+
     try {
       console.log("Login - Attempting login with:", formData.email);
       const result = await login(formData.email, formData.password);
       console.log("Login - Result:", result);
-      
+
       if (result.success) {
         console.log("Login successful!");
+        // Show success message
+        toast({
+          title: "Success",
+          description: "You have been logged in successfully!",
+        });
         // Redirect to home page after successful login
         navigate("/");
       } else {
@@ -59,6 +67,11 @@ const Login = () => {
     } catch (err) {
       console.error("Login - Unexpected error:", err);
       setError("An unexpected error occurred");
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred during login",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -68,8 +81,8 @@ const Login = () => {
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             onClick={() => navigate("/")}
             className="flex items-center gap-2 text-foreground hover:bg-battle-purple/10"
           >
@@ -77,38 +90,49 @@ const Login = () => {
             Back to Home
           </Button>
           <h1 className="text-3xl font-bold text-center flex-1 text-foreground">
-            CSS <span className="bg-gradient-primary bg-clip-text text-transparent">BATTLE</span> Championship
+            CSS{" "}
+            <span className="bg-gradient-primary bg-clip-text text-transparent">
+              BATTLE
+            </span>{" "}
+            Championship
           </h1>
           <div className="w-24"></div> {/* Spacer for alignment */}
         </div>
 
         <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 p-6 md:p-8 max-w-md mx-auto">
           <div className="text-center mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Log In</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+              Log In
+            </h2>
             <p className="text-foreground/80">Access your account</p>
           </div>
-          
+
           {showEmailVerificationMessage && (
             <div className="mb-6 p-4 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
               <div className="flex items-center">
                 <AlertCircle className="w-5 h-5 text-yellow-500 mr-2" />
-                <span className="text-yellow-200 font-medium">Email Verification Required</span>
+                <span className="text-yellow-200 font-medium">
+                  Email Verification Required
+                </span>
               </div>
               <p className="text-sm text-yellow-200 mt-2">
-                Please check your email and click the verification link before logging in.
+                Please check your email and click the verification link before
+                logging in.
               </p>
             </div>
           )}
-          
+
           {error && !showEmailVerificationMessage && (
             <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200">
               Error: {error}
             </div>
           )}
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-foreground">Email</Label>
+              <Label htmlFor="email" className="text-foreground">
+                Email
+              </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                 <Input
@@ -125,7 +149,9 @@ const Login = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground">Password</Label>
+              <Label htmlFor="password" className="text-foreground">
+                Password
+              </Label>
               <PasswordInput
                 id="password"
                 name="password"
@@ -138,7 +164,7 @@ const Login = () => {
             </div>
 
             <div className="flex items-center justify-between">
-              <Button 
+              <Button
                 type="button"
                 variant="link"
                 onClick={() => navigate("/register")}
@@ -149,7 +175,7 @@ const Login = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button 
+              <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate("/")}
@@ -157,12 +183,19 @@ const Login = () => {
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 type="submit"
                 disabled={isSubmitting}
                 className="flex-1 bg-gradient-primary hover:scale-105 transition-transform shadow-glow text-foreground"
               >
-                {isSubmitting ? "Logging in..." : "Log In"}
+                {isSubmitting ? (
+                  <span className="flex items-center">
+                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                    Logging in...
+                  </span>
+                ) : (
+                  "Log In"
+                )}
               </Button>
             </div>
           </form>

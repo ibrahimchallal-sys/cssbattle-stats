@@ -1,10 +1,21 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import Navbar from '@/components/Navbar';
-import { Button } from '@/components/ui/button';
-import { RefreshCw, Trophy, Medal, Award } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import Navbar from "@/components/Navbar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  RefreshCw,
+  Trophy,
+  Medal,
+  Award,
+  Crown,
+  Target,
+  Users,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { GROUP_OPTIONS } from "@/constants/groups";
 
 interface Player {
   id: string;
@@ -18,16 +29,26 @@ interface Player {
 const Leaderboard = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
+  const [groupFilter, setGroupFilter] = useState<string>("all");
   const { toast } = useToast();
   const { user } = useAuth();
 
   const fetchPlayers = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('players')
-        .select('id, full_name, cssbattle_profile_link, score, group_name, email')
-        .order('score', { ascending: false });
+      let query = supabase
+        .from("players")
+        .select(
+          "id, full_name, cssbattle_profile_link, score, group_name, email"
+        )
+        .order("score", { ascending: false });
+
+      // Apply group filter if not "all"
+      if (groupFilter !== "all") {
+        query = query.eq("group_name", groupFilter);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setPlayers(data || []);
@@ -44,123 +65,327 @@ const Leaderboard = () => {
 
   useEffect(() => {
     fetchPlayers();
-  }, []);
+  }, [groupFilter]);
 
   const getRankIcon = (index: number) => {
-    if (index === 0) return <Trophy className="w-6 h-6 text-yellow-400" />;
-    if (index === 1) return <Medal className="w-6 h-6 text-gray-300" />;
-    if (index === 2) return <Award className="w-6 h-6 text-amber-600" />;
+    if (index === 0) return <Crown className="w-5 h-5 text-yellow-500" />;
+    if (index === 1) return <Trophy className="w-5 h-5 text-gray-400" />;
+    if (index === 2) return <Medal className="w-5 h-5 text-amber-700" />;
     return null;
   };
 
-  // Get top 10 players
-  const topPlayers = players.slice(0, 10);
-  
+  const getRankBadge = (index: number) => {
+    if (index === 0)
+      return "bg-yellow-500/20 text-yellow-500 border-yellow-500/30";
+    if (index === 1) return "bg-gray-400/20 text-gray-400 border-gray-400/30";
+    if (index === 2)
+      return "bg-amber-700/20 text-amber-700 border-amber-700/30";
+    return "bg-primary/20 text-primary border-primary/30";
+  };
+
+  const getGroupColor = (groupName: string) => {
+    const group = GROUP_OPTIONS.find((g) => g.value === groupName);
+    if (!group) return "bg-muted";
+
+    if (group.category === "DEV") {
+      return "bg-purple-500/20 text-purple-500 border-purple-500/30";
+    } else {
+      return "bg-blue-500/20 text-blue-500 border-blue-500/30";
+    }
+  };
+
+  // Get top 3 players for special display
+  const topThreePlayers = players.slice(0, 3);
+
+  // Get players 4-10 for normal display
+  const normalPlayers = players.slice(3, 10);
+
   // Find current user's rank and data
-  const userRank = user ? players.findIndex(p => p.email === user.email) + 1 : -1;
-  const userIsInTop10 = userRank > 0 && userRank <= 10;
-  const currentUserData = user ? players.find(p => p.email === user.email) : null;
+  const userRank = user
+    ? players.findIndex((p) => p.email === user.email) + 1
+    : -1;
+  const currentUserData = user
+    ? players.find((p) => p.email === user.email)
+    : null;
+
+  // Get unique groups for filter
+  const uniqueGroups = Array.from(
+    new Set(players.map((p) => p.group_name).filter(Boolean))
+  ) as string[];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <Navbar />
-      
+
       <main className="container mx-auto px-4 py-8 mt-20">
         <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 Leaderboard
               </h1>
-              <p className="text-muted-foreground mt-2">CSS Battle Championship Rankings - Top 10</p>
+              <p className="text-muted-foreground mt-1">
+                CSS Battle Championship
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center">
+                <Target className="w-4 h-4 text-muted-foreground mr-1" />
+                <span className="text-xs text-muted-foreground">
+                  {players.length} Players
+                </span>
+              </div>
+              <Button
+                onClick={fetchPlayers}
+                variant="outline"
+                size="sm"
+                className="border-battle-purple/50 hover:bg-battle-purple/10 h-8"
+              >
+                <RefreshCw
+                  className={`w-3 h-3 mr-1 ${loading ? "animate-spin" : ""}`}
+                />
+                Refresh
+              </Button>
+            </div>
+          </div>
+
+          {/* Group Filter */}
+          <div className="mb-6">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={groupFilter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setGroupFilter("all")}
+                className={`h-7 text-xs ${
+                  groupFilter === "all"
+                    ? "bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
+                    : "border-battle-purple/50 hover:bg-battle-purple/10"
+                }`}
+              >
+                All Groups
+              </Button>
+              {uniqueGroups.slice(0, 5).map((group) => (
+                <Button
+                  key={group}
+                  variant={groupFilter === group ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setGroupFilter(group)}
+                  className={`h-7 text-xs ${
+                    groupFilter === group
+                      ? "bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
+                      : "border-battle-purple/50 hover:bg-battle-purple/10"
+                  }`}
+                >
+                  {group}
+                </Button>
+              ))}
             </div>
           </div>
 
           {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-pulse text-muted-foreground">Loading leaderboard...</div>
+            <div className="flex justify-center items-center h-48">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-battle-purple"></div>
             </div>
           ) : (
             <>
-              {/* Top 10 Leaderboard */}
-              <div className="space-y-3 mb-8">
-                {topPlayers.map((player, index) => {
-                  const isCurrentUser = user && player.email === user.email;
-                  return (
-                    <div
-                      key={player.id}
-                      className={`bg-card border rounded-lg p-4 transition-all duration-300 hover:shadow-lg ${
-                        isCurrentUser 
-                          ? 'border-primary/80 shadow-lg shadow-primary/20 bg-primary/5' 
-                          : 'border-border hover:border-primary/50 hover:shadow-primary/10'
-                      }`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold text-lg ${
-                          isCurrentUser ? 'bg-primary/20' : 'bg-primary/10'
-                        }`}>
-                          {getRankIcon(index) || `#${index + 1}`}
-                        </div>
-                        
-                        <div className="flex-1">
-                          <h3 className={`font-semibold text-lg ${
-                            isCurrentUser ? 'text-primary' : ''
-                          }`}>
-                            {player.full_name}
-                            {isCurrentUser && <span className="ml-2 text-sm">(You)</span>}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">Group: {player.group_name}</p>
-                        </div>
-                        
-                        <div className="text-right">
-                          <div className={`text-2xl font-bold ${
-                            isCurrentUser ? 'text-primary' : 'text-primary'
-                          }`}>
-                            {player.score.toLocaleString()}
-                          </div>
-                        </div>
+              {/* Compact Top 3 Design */}
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                {/* Second Place */}
+                {topThreePlayers[1] && (
+                  <div className="bg-card border border-gray-400/30 rounded-lg p-3 text-center transition-all duration-300 hover:shadow-lg">
+                    <div className="flex justify-center mb-2">
+                      <div className="bg-gray-400/20 rounded-full p-2">
+                        {getRankIcon(1)}
                       </div>
                     </div>
-                  );
-                })}
-                
-                {topPlayers.length === 0 && (
-                  <div className="text-center py-12 text-muted-foreground">
-                    No players registered yet
+                    <h3 className="font-bold text-sm text-gray-400 truncate px-1">
+                      {topThreePlayers[1].full_name}
+                    </h3>
+                    <div className="mt-2">
+                      <Badge
+                        className={`${getGroupColor(
+                          topThreePlayers[1].group_name || ""
+                        )} py-0 px-2 text-xs`}
+                      >
+                        {topThreePlayers[1].score?.toLocaleString() || "0"}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 text-2xl font-bold text-gray-400">
+                      2
+                    </div>
+                  </div>
+                )}
+
+                {/* First Place */}
+                {topThreePlayers[0] && (
+                  <div className="bg-card border-2 border-yellow-500/50 rounded-lg p-4 text-center transition-all duration-300 hover:shadow-lg shadow-lg shadow-yellow-500/20 -mt-2">
+                    <div className="flex justify-center mb-2">
+                      <div className="bg-yellow-500/20 rounded-full p-2">
+                        {getRankIcon(0)}
+                      </div>
+                    </div>
+                    <h3 className="font-bold text-base text-yellow-500 truncate px-1">
+                      {topThreePlayers[0].full_name}
+                    </h3>
+                    <div className="mt-2">
+                      <Badge
+                        className={`${getGroupColor(
+                          topThreePlayers[0].group_name || ""
+                        )} py-0 px-2 text-xs font-bold`}
+                      >
+                        {topThreePlayers[0].score?.toLocaleString() || "0"}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 text-3xl font-bold text-yellow-500">
+                      1
+                    </div>
+                  </div>
+                )}
+
+                {/* Third Place */}
+                {topThreePlayers[2] && (
+                  <div className="bg-card border border-amber-700/30 rounded-lg p-3 text-center transition-all duration-300 hover:shadow-lg">
+                    <div className="flex justify-center mb-2">
+                      <div className="bg-amber-700/20 rounded-full p-2">
+                        {getRankIcon(2)}
+                      </div>
+                    </div>
+                    <h3 className="font-bold text-sm text-amber-700 truncate px-1">
+                      {topThreePlayers[2].full_name}
+                    </h3>
+                    <div className="mt-2">
+                      <Badge
+                        className={`${getGroupColor(
+                          topThreePlayers[2].group_name || ""
+                        )} py-0 px-2 text-xs`}
+                      >
+                        {topThreePlayers[2].score?.toLocaleString() || "0"}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 text-2xl font-bold text-amber-700">
+                      3
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Current User Card (if not in top 10) */}
-              {user && !userIsInTop10 && currentUserData && userRank > 0 && (
-                <div className="mt-8">
-                  <h2 className="text-2xl font-bold text-foreground mb-4">Your Ranking</h2>
-                  <div className="bg-card border-2 border-primary/50 rounded-lg p-6 shadow-lg shadow-primary/20">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/20 font-bold text-xl text-primary">
+              {/* Positions 4-10 in a compact table */}
+              <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 mb-6">
+                <CardContent className="p-0">
+                  <div className="divide-y divide-border">
+                    {normalPlayers.map((player, index) => {
+                      const actualIndex = index + 3;
+                      const isCurrentUser = user && player.email === user.email;
+                      return (
+                        <div
+                          key={player.id}
+                          className={`p-4 transition-all duration-300 hover:bg-card/80 ${
+                            isCurrentUser
+                              ? "bg-primary/5 border-l-2 border-primary"
+                              : ""
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold border ${getRankBadge(
+                                actualIndex
+                              )}`}
+                            >
+                              {actualIndex + 1}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <h3
+                                className={`font-medium truncate ${
+                                  isCurrentUser ? "text-primary" : ""
+                                }`}
+                              >
+                                {player.full_name}
+                                {isCurrentUser && (
+                                  <span className="ml-2 text-xs bg-primary/20 px-1.5 py-0.5 rounded">
+                                    You
+                                  </span>
+                                )}
+                              </h3>
+                              <Badge
+                                className={`${getGroupColor(
+                                  player.group_name || ""
+                                )} py-0 px-1.5 text-xs mt-1`}
+                              >
+                                {player.group_name}
+                              </Badge>
+                            </div>
+
+                            <div className="text-right">
+                              <div
+                                className={`font-bold ${
+                                  isCurrentUser ? "text-primary" : ""
+                                }`}
+                              >
+                                {player.score !== null &&
+                                player.score !== undefined
+                                  ? player.score.toLocaleString()
+                                  : "0"}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {normalPlayers.length === 0 && (
+                    <div className="p-8 text-center text-muted-foreground">
+                      No players found in this group
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Current User Position */}
+              {user && currentUserData && userRank > 0 && (
+                <Card className="bg-card/50 backdrop-blur-sm border-primary/50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/20 font-bold text-primary border border-primary/30">
                         #{userRank}
                       </div>
-                      
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-xl text-primary">
+
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-primary truncate">
                           {currentUserData.full_name}
-                          <span className="ml-2 text-sm text-muted-foreground">(You)</span>
+                          <span className="ml-2 text-xs bg-primary/20 px-2 py-1 rounded">
+                            You
+                          </span>
                         </h3>
-                        <p className="text-sm text-muted-foreground">Group: {currentUserData.group_name}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {userRank - 10} places away from top 10
-                        </p>
+                        <Badge
+                          className={`${getGroupColor(
+                            currentUserData.group_name || ""
+                          )} py-0 px-1.5 text-xs mt-1`}
+                        >
+                          {currentUserData.group_name}
+                        </Badge>
                       </div>
-                      
+
                       <div className="text-right">
-                        <div className="text-3xl font-bold text-primary">
-                          {currentUserData.score.toLocaleString()}
+                        <div className="text-xl font-bold text-primary">
+                          {currentUserData.score !== null &&
+                          currentUserData.score !== undefined
+                            ? currentUserData.score.toLocaleString()
+                            : "0"}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">points</p>
                       </div>
                     </div>
-                  </div>
-                </div>
+
+                    {userRank > 10 && (
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <p className="text-center text-xs text-muted-foreground">
+                          {userRank - 10} positions away from top 10
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               )}
             </>
           )}
