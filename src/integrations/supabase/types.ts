@@ -160,6 +160,51 @@ export type Database = {
         }
         Relationships: []
       }
+      players_public: {
+        Row: {
+          badges: string[] | null
+          created_at: string
+          cssbattle_profile_link: string | null
+          email: string
+          full_name: string
+          group_name: string | null
+          id: string
+          phone: string | null
+          rank: string | null
+          score: number | null
+          updated_at: string
+          verified_ofppt: boolean | null
+        }
+        Insert: {
+          badges?: string[] | null
+          created_at?: string
+          cssbattle_profile_link?: string | null
+          email: string
+          full_name: string
+          group_name?: string | null
+          id: string
+          phone?: string | null
+          rank?: string | null
+          score?: number | null
+          updated_at?: string
+          verified_ofppt?: boolean | null
+        }
+        Update: {
+          badges?: string[] | null
+          created_at?: string
+          cssbattle_profile_link?: string | null
+          email?: string
+          full_name?: string
+          group_name?: string | null
+          id?: string
+          phone?: string | null
+          rank?: string | null
+          score?: number | null
+          updated_at?: string
+          verified_ofppt?: boolean | null
+        }
+        Relationships: []
+      }
       quiz_scores: {
         Row: {
           completed_at: string

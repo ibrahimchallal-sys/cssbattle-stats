@@ -19,6 +19,7 @@ import DatabaseTest from "./pages/DatabaseTest";
 import DatabasePermissionsTest from "./pages/DatabasePermissionsTest";
 import PasswordReset from "./pages/PasswordReset";
 import Contact from "./pages/Contact";
+import TestPlayerFetch from "./pages/TestPlayerFetch";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import PlayerProtectedRoute from "./components/PlayerProtectedRoute";
 
@@ -165,6 +166,15 @@ const App = () => (
                 <>
                   <Navbar />
                   <DatabasePermissionsTest />
+                </>
+              }
+            />
+            <Route
+              path="/test-player-fetch"
+              element={
+                <>
+                  <Navbar />
+                  <TestPlayerFetch />
                 </>
               }
             />

@@ -145,7 +145,7 @@ const Login = () => {
           )}
 
           {error && !showEmailVerificationMessage && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200">
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-foreground">
               {language === "en" ? "Error:" : "Erreur :"} {error}
             </div>
           )}

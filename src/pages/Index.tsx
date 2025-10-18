@@ -110,8 +110,8 @@ const Index = () => {
           {/* Subtitle */}
           <p className="text-lg md:text-xl lg:text-2xl text-foreground/80 mb-8 md:mb-12 max-w-3xl mx-auto">
             {language === "en"
-              ? "Compete against developers worldwide. Write the cleanest code. Claim victory."
-              : "Affrontez des développeurs du monde entier. Écrivez le code le plus propre. Remportez la victoire."}
+              ? "Compete with other players. Write the cleanest code. Claim victory."
+              : "Affrontez des autres joueurs. Écrivez le code le plus propre. Remportez la victoire."}
           </p>
 
           {/* Code Example */}
@@ -129,10 +129,10 @@ const Index = () => {
               <Users className="w-6 h-6 md:w-8 md:h-8 text-background" />
             </div>
             <h3 className="text-xl md:text-2xl font-bold mb-2 text-foreground">
-              {language === "en" ? "Global Players" : "Joueurs Mondiaux"}
+              {language === "en" ? "Players" : "Joueurs"}
             </h3>
             <p className="text-2xl md:text-3xl font-bold text-battle-pink mb-2">
-              {playerCount !== null ? playerCount.toLocaleString() : "1,000+"}
+              {playerCount !== null ? playerCount.toLocaleString() : "20+"}
             </p>
             <p className="text-foreground/70">
               {language === "en"

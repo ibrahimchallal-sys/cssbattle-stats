@@ -94,6 +94,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (initialized) return;
 
     try {
+      // Check if user is logged in as admin
+      const hardcodedAdmin = safeLocalStorage.getItem("hardcoded_admin");
+      if (hardcodedAdmin) {
+        // If admin is logged in, don't treat them as a player
+        setUser(null);
+        setLoading(false);
+        setInitialized(true);
+        return;
+      }
+
       // Check for existing session
       const {
         data: { session },
@@ -126,6 +136,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
 
+      // Check if user is logged in as admin
+      const hardcodedAdmin = safeLocalStorage.getItem("hardcoded_admin");
+      if (hardcodedAdmin) {
+        // If admin is logged in, don't treat them as a player
+        if (mounted) {
+          setUser(null);
+        }
+        return;
+      }
+
       if (session?.user) {
         fetchUserProfile(session).then((userProfile) => {
           if (mounted) {
@@ -149,6 +169,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
+      // Check if user is already logged in as admin
+      const hardcodedAdmin = safeLocalStorage.getItem("hardcoded_admin");
+      if (hardcodedAdmin) {
+        return { success: false, error: "Please logout as admin first" };
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -211,6 +237,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (data.user) {
+        // Check if CSS Battle link is already used by another player
+        if (userData.cssLink) {
+          const { data: existingPlayers, error: checkError } = await supabase
+            .from("players")
+            .select("id, full_name")
+            .eq("cssbattle_profile_link", userData.cssLink);
+
+          if (checkError) {
+            return { success: false, error: `Database error: ${checkError.message}` };
+          }
+
+          if (existingPlayers && existingPlayers.length > 0) {
+            return { success: false, error: "CSS Battle link is already in use by another player" };
+          }
+        }
+
         const { error: insertError } = await supabase.from("players").insert([
           {
             id: data.user.id,

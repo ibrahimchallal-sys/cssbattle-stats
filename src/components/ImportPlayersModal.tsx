@@ -310,7 +310,7 @@ const ImportPlayersModal = ({
                 </div>
                 <div className="max-h-40 overflow-y-auto">
                   {validationResults.map((result, index) => (
-                    <p key={index} className="text-sm text-red-200 mb-1">
+                    <p key={index} className="text-sm text-foreground mb-1">
                       Row {result.row}: {result.message}
                     </p>
                   ))}
@@ -327,7 +327,7 @@ const ImportPlayersModal = ({
                 </div>
                 <div className="max-h-40 overflow-y-auto">
                   {errors.map((error, index) => (
-                    <p key={index} className="text-sm text-red-200 mb-1">
+                    <p key={index} className="text-sm text-foreground mb-1">
                       {error}
                     </p>
                   ))}

@@ -107,6 +107,7 @@ const AdminDashboard = () => {
     group_name: "",
     password: "",
     phone: "",
+    cssbattle_profile_link: "",
   });
   const [isCreating, setIsCreating] = useState(false);
 
@@ -123,6 +124,8 @@ const AdminDashboard = () => {
   const [newPassword, setNewPassword] = useState("");
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [playerCount, setPlayerCount] = useState(0);
+  const [cssBattleLinkCount, setCssBattleLinkCount] = useState(0);
 
   useEffect(() => {
     // Use AdminContext to validate access and get admin email
@@ -161,6 +164,7 @@ const AdminDashboard = () => {
 
   const fetchPlayers = async () => {
     try {
+      // Fetch players
       const { data, error } = await supabase
         .from("players")
         .select("*")
@@ -171,6 +175,13 @@ const AdminDashboard = () => {
       }
 
       setPlayers(data || []);
+      
+      // Update counts
+      setPlayerCount(data?.length || 0);
+      
+      // Count players with CSS Battle links
+      const cssBattleCount = data?.filter(player => player.cssbattle_profile_link)?.length || 0;
+      setCssBattleLinkCount(cssBattleCount);
     } catch (err) {
       setError("Failed to fetch players");
       console.error(err);
@@ -267,6 +278,23 @@ const AdminDashboard = () => {
         throw new Error(`Player not found in database with ID: ${playerId}`);
       }
 
+      // Check if CSS Battle link is already used by another player
+      if (editForm.cssbattle_profile_link) {
+        const { data: existingPlayers, error: checkError } = await supabase
+          .from("players")
+          .select("id, full_name")
+          .neq("id", playerId) // Exclude current player
+          .eq("cssbattle_profile_link", editForm.cssbattle_profile_link);
+
+        if (checkError) {
+          throw new Error(`Database error: ${checkError.message}`);
+        }
+
+        if (existingPlayers && existingPlayers.length > 0) {
+          throw new Error("CSS Battle link is already in use by another player");
+        }
+      }
+
       // Now try to update
       const { data: updateData, error: updateError } = await supabase
         .from("players")
@@ -345,12 +373,29 @@ const AdminDashboard = () => {
       }
 
       if (data.user) {
+        // Check if CSS Battle link is already used by another player
+        if (createForm.cssbattle_profile_link) {
+          const { data: existingPlayers, error: checkError } = await supabase
+            .from("players")
+            .select("id, full_name")
+            .eq("cssbattle_profile_link", createForm.cssbattle_profile_link);
+
+          if (checkError) {
+            throw new Error(`Database error: ${checkError.message}`);
+          }
+
+          if (existingPlayers && existingPlayers.length > 0) {
+            throw new Error("CSS Battle link is already in use by another player");
+          }
+        }
+
         // Insert user data into players table
         const { error: insertError } = await supabase.from("players").insert([
           {
             id: data.user.id,
             full_name: createForm.full_name,
             email: createForm.email,
+            cssbattle_profile_link: createForm.cssbattle_profile_link || null,
             group_name: createForm.group_name,
             phone: createForm.phone || null,
             score: 0,
@@ -369,6 +414,7 @@ const AdminDashboard = () => {
           group_name: "",
           password: "",
           phone: "",
+          cssbattle_profile_link: "",
         });
         fetchPlayers(); // Refresh the player list
 
@@ -1017,6 +1063,28 @@ const AdminDashboard = () => {
           </div>
         </div>
 
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card className="bg-purple-500/20 dark:bg-purple-600/30 backdrop-blur-sm border-battle-purple/30 p-6">
+            <div className="flex items-center">
+              <Users className="w-8 h-8 text-battle-purple mr-4" />
+              <div>
+                <p className="text-sm font-medium text-foreground/80">Total Players</p>
+                <p className="text-2xl font-bold text-foreground">{playerCount}</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="bg-blue-500/20 dark:bg-yellow-500/20 backdrop-blur-sm border-blue-500/30 dark:border-yellow-500/30 p-6">
+            <div className="flex items-center">
+              <Link className="w-8 h-8 text-blue-500 dark:text-yellow-500 mr-4" />
+              <div>
+                <p className="text-sm font-medium text-foreground/80">CSS Battle Links</p>
+                <p className="text-2xl font-bold text-foreground">{cssBattleLinkCount}</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
         {/* Search and Messages */}
         <div className="mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center gap-4 mb-4">
@@ -1207,13 +1275,13 @@ const AdminDashboard = () => {
           </div>
 
           {error && (
-            <div className="mb-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200">
+            <div className="mb-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-foreground">
               Error: {error}
             </div>
           )}
 
           {success && (
-            <div className="mb-4 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-green-200">
+            <div className="mb-4 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-foreground">
               {success}
             </div>
           )}
@@ -1457,7 +1525,7 @@ const AdminDashboard = () => {
                     ? This action cannot be undone.
                   </p>
                   <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-                    <p className="text-red-200 text-sm">
+                    <p className="text-foreground text-sm">
                       <strong>Warning:</strong> This will permanently remove the
                       player's account and all associated data.
                     </p>
@@ -1514,7 +1582,7 @@ const AdminDashboard = () => {
                 </div>
 
                 {error && !success && (
-                  <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+                  <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-foreground text-sm">
                     {error}
                   </div>
                 )}
@@ -1592,6 +1660,24 @@ const AdminDashboard = () => {
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="cssbattle_profile_link" className="text-foreground">
+                      CSSBattle Profile Link
+                    </Label>
+                    <Input
+                      id="cssbattle_profile_link"
+                      value={createForm.cssbattle_profile_link}
+                      onChange={(e) =>
+                        setCreateForm({
+                          ...createForm,
+                          cssbattle_profile_link: e.target.value,
+                        })
+                      }
+                      placeholder="https://cssbattle.dev/player/..."
+                      className="bg-background/50 border-battle-purple/30"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="password" className="text-foreground">
                       Password *
                     </Label>
@@ -1660,7 +1746,7 @@ const AdminDashboard = () => {
                 </div>
 
                 {error && !success && (
-                  <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+                  <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-foreground text-sm">
                     {error}
                   </div>
                 )}
@@ -1732,3 +1818,5 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
+

@@ -160,13 +160,13 @@ const PasswordReset = () => {
         </div>
         
         {error && (
-          <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+          <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-foreground text-sm">
             {error}
           </div>
         )}
         
         {success && (
-          <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-green-200 text-sm">
+          <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-foreground text-sm">
             {success}
           </div>
         )}

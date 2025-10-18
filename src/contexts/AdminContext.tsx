@@ -120,6 +120,9 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     safeLocalStorage.removeItem("hardcoded_admin");
     setAdmin(null);
     setIsAdmin(false);
+    
+    // Also sign out from Supabase auth to ensure clean state
+    await supabase.auth.signOut();
   };
 
   // Always render children, but show loading spinner during initialization

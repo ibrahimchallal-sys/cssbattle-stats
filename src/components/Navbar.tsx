@@ -125,9 +125,19 @@ const Navbar = () => {
 
             {/* Institute Name */}
             <div className="flex-1 text-center px-2">
-              <span className="text-xs font-medium text-foreground">
-                {t("navbar.institute")}
-              </span>
+              <div className="text-xs font-medium text-foreground flex flex-col items-center justify-center text-center">
+                {language === 'en' ? (
+                  <>
+                    <span>Specialized Training</span>
+                    <span>Institute for Offshoring</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-[11px]">Institut Spécialisé de</span>
+                    <span className="text-[11px]">Formation de l'Offshoring</span>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Mobile menu button */}
@@ -167,7 +177,7 @@ const Navbar = () => {
         </div>
 
         {/* Single-line layout for desktop */}
-        <div className="hidden md:flex items-center justify-between h-16">
+        <div className="hidden md:flex items-center justify-between h-16 w-full">
           {/* Logo and Institute Name */}
           <div className="flex-shrink-0 flex items-center">
             <img
@@ -175,22 +185,32 @@ const Navbar = () => {
               alt="OFPPT Logo"
               className="h-10 w-auto"
             />
-            <span className="ml-3 text-sm font-medium text-foreground">
-              {t("navbar.institute")}
-            </span>
+            <div className="ml-3 text-sm font-medium text-foreground flex flex-col justify-center">
+              {language === 'en' ? (
+                <>
+                  <span>Specialized Training</span>
+                  <span>Institute for Offshoring</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-[13px]">Institut Spécialisé de</span>
+                  <span className="text-[13px]">Formation de l'Offshoring</span>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Desktop Navigation - Centered */}
-          <nav className="flex items-center space-x-8 absolute left-1/2 transform -translate-x-1/2">
+          <nav className={`flex items-center ${isAdmin ? 'ml-12' : ''} absolute left-1/2 transform -translate-x-1/2`}>
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 to={link.href}
                 className={`${
                   location.pathname === link.href
-                    ? "text-foreground font-bold"
-                    : "text-foreground/80 hover:text-foreground"
-                } transition-colors font-medium`}
+                    ? "text-foreground font-bold border-b-2 border-purple-700"
+                    : "text-foreground/80 hover:text-foreground hover:border-b-2 hover:border-purple-700/50"
+                } transition-all duration-300 ease-in-out font-medium border-b-2 border-transparent mx-4 whitespace-nowrap ${language === 'fr' ? 'text-sm' : 'text-base'}`}
               >
                 {link.name}
               </Link>
@@ -219,15 +239,17 @@ const Navbar = () => {
             </Button>
             <div className="flex items-center space-x-2">
               {isAdmin && (
-                <Button
-                  onClick={handleAdminLogout}
-                  variant="outline"
-                  size="sm"
-                  className="border-red-500/50 hover:bg-red-500/10 text-xs flex items-center"
-                >
-                  <LogOut className="w-3 h-3 mr-1" />
-                  {t("navbar.logout")}
-                </Button>
+                <div className="flex items-center space-x-3 mr-4">
+                  <button
+                    onClick={handleAdminLogout}
+                    className="flex items-center bg-gradient-to-r from-battle-purple to-indigo-600 rounded-full px-4 py-1.5 shadow-sm hover:shadow-md transition-all duration-200"
+                  >
+                    <span className="text-xs font-semibold text-white mr-2">
+                      ADMIN
+                    </span>
+                    <LogOut className="w-4 h-4 text-white hover:text-red-200" />
+                  </button>
+                </div>
               )}
               {user ? (
                 <div className="flex items-center space-x-2">
@@ -285,9 +307,9 @@ const Navbar = () => {
                   to={link.href}
                   className={`${
                     location.pathname === link.href
-                      ? "text-foreground font-bold"
-                      : "text-foreground/80 hover:text-foreground"
-                  } transition-colors font-medium px-2 py-1`}
+                      ? "text-foreground font-bold border-b-2 border-purple-700"
+                      : "text-foreground/80 hover:text-foreground hover:border-b-2 hover:border-purple-700/50"
+                  } transition-all duration-300 ease-in-out font-medium border-b-2 border-transparent px-2 py-1 whitespace-nowrap ${language === 'fr' ? 'text-sm' : 'text-base'}`}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {link.name}
@@ -345,6 +367,11 @@ const Navbar = () => {
                   </>
                 ) : isAdmin ? (
                   <>
+                    <div className="flex items-center bg-battle-purple/10 rounded-full px-3 py-2 justify-center">
+                      <span className="text-xs font-medium text-battle-purple mr-2">
+                        ADMINISTRATEUR
+                      </span>
+                    </div>
                     <Button
                       onClick={() => {
                         handleAdminLogout();
