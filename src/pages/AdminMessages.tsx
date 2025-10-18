@@ -64,8 +64,6 @@ const AdminMessages = () => {
         return;
       }
       
-      console.log("Fetching messages for admin:", admin.email);
-      
       // Fetch messages sent to the current admin
       const { data, error } = await supabase
         .from("contact_messages")
@@ -76,24 +74,11 @@ const AdminMessages = () => {
       if (error) throw error;
 
       setMessages((data as ContactMessage[]) || []);
-      console.log(`Fetched ${data?.length || 0} messages for ${admin.email}`);
-      
-      // Also log all messages for debugging
-      const { data: allData, error: allError } = await supabase
-        .from("contact_messages")
-        .select("*")
-        .order("created_at", { ascending: false });
-        
-      if (!allError) {
-        console.log("All messages in database:", allData?.length || 0);
-        console.log("Messages with recipient_email matching admin:", 
-          allData?.filter(msg => msg.recipient_email === admin.email).length || 0);
-      }
     } catch (error) {
       console.error("Failed to fetch messages:", error);
       toast({
         title: "Error",
-        description: "Failed to fetch messages: " + (error as Error).message,
+        description: "Failed to fetch messages",
         variant: "destructive",
       });
     } finally {
