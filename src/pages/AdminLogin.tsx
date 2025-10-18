@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PasswordInput from "@/components/PasswordInput";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext"; // Add this import
 import { useState, useEffect } from "react";
 import { ArrowLeft, Shield, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +14,8 @@ import { useAdmin } from "@/contexts/AdminContext";
 const AdminLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAdmin, admin } = useAdmin();
+  const { isAdmin, admin, logout: adminLogout } = useAdmin();
+  const { user, logout: playerLogout } = useAuth(); // Get player context and logout function
   const adminEmails = [
     "ibrahimchallal@admincss.com",
     "younesshlibi@admincss.com",
@@ -27,26 +29,26 @@ const AdminLogin = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    console.log('AdminLogin - isAdmin:', isAdmin, 'admin:', admin);
+    console.log("AdminLogin - isAdmin:", isAdmin, "admin:", admin);
     // Redirect if already logged in as admin
     if (isAdmin && admin) {
-      console.log('Already logged in, redirecting to dashboard');
+      console.log("Already logged in, redirecting to dashboard");
       navigate("/admin/dashboard");
     }
   }, [isAdmin, admin, navigate]);
 
   // Also check localStorage directly on component mount
   useEffect(() => {
-    console.log('Checking localStorage for admin data');
+    console.log("Checking localStorage for admin data");
     const hardcodedAdmin = localStorage.getItem("hardcoded_admin");
-    console.log('Found hardcodedAdmin:', hardcodedAdmin);
+    console.log("Found hardcodedAdmin:", hardcodedAdmin);
     if (hardcodedAdmin) {
       try {
         const adminData = JSON.parse(hardcodedAdmin);
-        console.log('Parsed adminData:', adminData);
+        console.log("Parsed adminData:", adminData);
         if (adminData && adminData.email) {
           // Already logged in, redirect to dashboard
-          console.log('Admin data found, redirecting to dashboard');
+          console.log("Admin data found, redirecting to dashboard");
           navigate("/admin/dashboard");
         }
       } catch (error) {
@@ -61,6 +63,17 @@ const AdminLogin = () => {
     setIsSubmitting(true);
 
     try {
+      // If player is currently logged in, log them out first
+      if (user) {
+        console.log("Logging out player session before admin login");
+        await playerLogout();
+        toast({
+          title: "Session Switched",
+          description:
+            "You have been logged out as player. Logging in as admin...",
+        });
+      }
+
       // Check hardcoded admin credentials
       if (!adminEmails.includes(email)) {
         throw new Error("Invalid admin email");
@@ -70,9 +83,31 @@ const AdminLogin = () => {
         throw new Error("Invalid password");
       }
 
-      // Store admin session in localStorage
+      // Try to find a real admin user ID from the database
+      let adminUserId = "00000000-0000-0000-0000-000000000000"; // Default placeholder
+      let foundRealAdmin = false;
+
+      try {
+        const { data: adminUsers, error: adminError } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .eq("role", "admin")
+          .limit(1);
+
+        if (!adminError && adminUsers && adminUsers.length > 0) {
+          adminUserId = adminUsers[0].user_id;
+          foundRealAdmin = true;
+          console.log("Found real admin user ID:", adminUserId);
+        } else {
+          console.log("No real admin users found, using placeholder UUID");
+        }
+      } catch (dbError) {
+        console.warn("Could not fetch admin user ID from database:", dbError);
+      }
+
+      // Store admin session in localStorage with proper UUID
       const adminData = {
-        id: email,
+        id: adminUserId,
         email: email,
         email_confirmed_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
@@ -80,15 +115,19 @@ const AdminLogin = () => {
       localStorage.setItem("hardcoded_admin", JSON.stringify(adminData));
 
       // Manually dispatch storage event for the same tab
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: 'hardcoded_admin',
-        newValue: JSON.stringify(adminData),
-        url: window.location.href
-      }));
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: "hardcoded_admin",
+          newValue: JSON.stringify(adminData),
+          url: window.location.href,
+        })
+      );
 
       toast({
         title: "Success",
-        description: "Logged in successfully",
+        description: foundRealAdmin
+          ? "Logged in successfully as admin"
+          : "Logged in successfully (limited functionality mode)",
       });
 
       // Small delay to ensure context is updated before navigation
@@ -185,7 +224,7 @@ const AdminLogin = () => {
                 type="button"
                 variant="outline"
                 onClick={() => navigate("/")}
-                className="flex-1 border-battle-purple/50 hover:bg-battle-purple/10"
+                className="flex-1 border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground"
               >
                 Cancel
               </Button>

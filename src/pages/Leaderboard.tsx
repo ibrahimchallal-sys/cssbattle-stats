@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   RefreshCw,
   Trophy,
   Medal,
@@ -21,10 +28,13 @@ import { GROUP_OPTIONS } from "@/constants/groups";
 interface Player {
   id: string;
   full_name: string;
-  cssbattle_profile_link: string | null;
+  email: string;
+  group_name: string | null;
   score: number;
-  group_name: string;
-  email?: string;
+  cssbattle_profile_link: string | null;
+  phone: string | null;
+  created_at: string;
+  video_completed: boolean | null;
 }
 
 const Leaderboard = () => {
@@ -38,12 +48,13 @@ const Leaderboard = () => {
   const fetchPlayers = async () => {
     setLoading(true);
     try {
+      // First, get all verified players
       let query = supabase
         .from("players")
         .select(
-          "id, full_name, cssbattle_profile_link, score, group_name, email"
+          "id, full_name, cssbattle_profile_link, score, group_name, email, verified_ofppt"
         )
-        .order("score", { ascending: false });
+        .eq("verified_ofppt", true); // Only show verified players
 
       // Apply group filter if not "all"
       if (groupFilter !== "all") {
@@ -53,7 +64,15 @@ const Leaderboard = () => {
       const { data, error } = await query;
 
       if (error) throw error;
-      setPlayers(data || []);
+
+      // Sort players by score in descending order, handling null/undefined values
+      const sortedPlayers = (data || []).sort((a, b) => {
+        const scoreA = a.score !== null && a.score !== undefined ? a.score : 0;
+        const scoreB = b.score !== null && b.score !== undefined ? b.score : 0;
+        return scoreB - scoreA; // Descending order
+      });
+
+      setPlayers(sortedPlayers);
     } catch (error) {
       toast({
         title: language === "en" ? "Error" : "Erreur",
@@ -70,6 +89,40 @@ const Leaderboard = () => {
 
   useEffect(() => {
     fetchPlayers();
+
+    // Set up real-time subscription for player changes
+    const channel = supabase
+      .channel("leaderboard-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "players",
+        },
+        (payload) => {
+          // Refresh the leaderboard when a player is updated
+          fetchPlayers();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "players",
+        },
+        (payload) => {
+          // Refresh the leaderboard when a new player is added
+          fetchPlayers();
+        }
+      )
+      .subscribe();
+
+    // Clean up subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [groupFilter]);
 
   const getRankIcon = (index: number) => {
@@ -113,10 +166,9 @@ const Leaderboard = () => {
     ? players.find((p) => p.email === user.email)
     : null;
 
-  // Get unique groups for filter
-  const uniqueGroups = Array.from(
-    new Set(players.map((p) => p.group_name).filter(Boolean))
-  ) as string[];
+  // Get unique groups for filter - use all groups from constants instead of calculating from players
+  // This prevents the disappearing group options issue
+  const allGroups = GROUP_OPTIONS.map((option) => option.value);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
@@ -157,36 +209,28 @@ const Leaderboard = () => {
           </div>
 
           {/* Group Filter */}
-          <div className="mb-6">
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={groupFilter === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setGroupFilter("all")}
-                className={`h-7 text-xs ${
-                  groupFilter === "all"
-                    ? "bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
-                    : "border-battle-purple/50 hover:bg-battle-purple/10"
-                }`}
-              >
-                {language === "en" ? "All Groups" : "Tous les Groupes"}
-              </Button>
-              {uniqueGroups.slice(0, 5).map((group) => (
-                <Button
-                  key={group}
-                  variant={groupFilter === group ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setGroupFilter(group)}
-                  className={`h-7 text-xs ${
-                    groupFilter === group
-                      ? "bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
-                      : "border-battle-purple/50 hover:bg-battle-purple/10"
-                  }`}
-                >
-                  {group}
-                </Button>
-              ))}
-            </div>
+          <div className="mb-6 w-48">
+            <Select value={groupFilter} onValueChange={setGroupFilter}>
+              <SelectTrigger className="border-battle-purple/50 hover:bg-battle-purple/10">
+                <SelectValue
+                  placeholder={
+                    language === "en"
+                      ? "Select Group"
+                      : "Sélectionner un Groupe"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  {language === "en" ? "All Groups" : "Tous les Groupes"}
+                </SelectItem>
+                {allGroups.map((group) => (
+                  <SelectItem key={group} value={group}>
+                    {group}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {loading ? (
@@ -195,85 +239,181 @@ const Leaderboard = () => {
             </div>
           ) : (
             <>
-              {/* Compact Top 3 Design */}
-              <div className="grid grid-cols-3 gap-3 mb-6">
-                {/* Second Place */}
-                {topThreePlayers[1] && (
-                  <div className="bg-card border border-gray-400/30 rounded-lg p-3 text-center transition-all duration-300 hover:shadow-lg">
-                    <div className="flex justify-center mb-2">
-                      <div className="bg-gray-400/20 rounded-full p-2">
-                        {getRankIcon(1)}
+              {/* Compact Top 3 Design with Creative Podium Formation on Mobile */}
+              <div className="relative mb-6">
+                {/* Grid formation for desktop */}
+                <div className="hidden md:grid md:grid-cols-3 md:gap-3">
+                  {/* Second Place */}
+                  {topThreePlayers[1] && (
+                    <div className="bg-card border border-gray-400/30 rounded-lg p-3 text-center transition-all duration-300 hover:shadow-lg">
+                      <div className="flex justify-center mb-2">
+                        <div className="bg-gray-400/20 rounded-full p-2">
+                          {getRankIcon(1)}
+                        </div>
+                      </div>
+                      <h3 className="font-bold text-sm text-gray-400 truncate px-1">
+                        {topThreePlayers[1].full_name}
+                      </h3>
+                      <div className="mt-2">
+                        <Badge
+                          className={`${getGroupColor(
+                            topThreePlayers[1].group_name || ""
+                          )} py-0 px-2 text-xs`}
+                        >
+                          {topThreePlayers[1].score?.toLocaleString() || "0"}
+                        </Badge>
+                      </div>
+                      <div className="mt-2 text-2xl font-bold text-gray-400">
+                        2
                       </div>
                     </div>
-                    <h3 className="font-bold text-sm text-gray-400 truncate px-1">
-                      {topThreePlayers[1].full_name}
-                    </h3>
-                    <div className="mt-2">
-                      <Badge
-                        className={`${getGroupColor(
-                          topThreePlayers[1].group_name || ""
-                        )} py-0 px-2 text-xs`}
-                      >
-                        {topThreePlayers[1].score?.toLocaleString() || "0"}
-                      </Badge>
-                    </div>
-                    <div className="mt-2 text-2xl font-bold text-gray-400">
-                      2
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                {/* First Place */}
-                {topThreePlayers[0] && (
-                  <div className="bg-card border-2 border-yellow-500/50 rounded-lg p-4 text-center transition-all duration-300 hover:shadow-lg shadow-lg shadow-yellow-500/20 -mt-2">
-                    <div className="flex justify-center mb-2">
-                      <div className="bg-yellow-500/20 rounded-full p-2">
-                        {getRankIcon(0)}
+                  {/* First Place */}
+                  {topThreePlayers[0] && (
+                    <div className="bg-card border-2 border-yellow-500/50 rounded-lg p-4 text-center transition-all duration-300 hover:shadow-lg shadow-lg shadow-yellow-500/20 -mt-2">
+                      <div className="flex justify-center mb-2">
+                        <div className="bg-yellow-500/20 rounded-full p-2">
+                          {getRankIcon(0)}
+                        </div>
+                      </div>
+                      <h3 className="font-bold text-base text-yellow-500 truncate px-1">
+                        {topThreePlayers[0].full_name}
+                      </h3>
+                      <div className="mt-2">
+                        <Badge
+                          className={`${getGroupColor(
+                            topThreePlayers[0].group_name || ""
+                          )} py-0 px-2 text-xs font-bold`}
+                        >
+                          {topThreePlayers[0].score?.toLocaleString() || "0"}
+                        </Badge>
+                      </div>
+                      <div className="mt-2 text-3xl font-bold text-yellow-500">
+                        1
                       </div>
                     </div>
-                    <h3 className="font-bold text-base text-yellow-500 truncate px-1">
-                      {topThreePlayers[0].full_name}
-                    </h3>
-                    <div className="mt-2">
-                      <Badge
-                        className={`${getGroupColor(
-                          topThreePlayers[0].group_name || ""
-                        )} py-0 px-2 text-xs font-bold`}
-                      >
-                        {topThreePlayers[0].score?.toLocaleString() || "0"}
-                      </Badge>
-                    </div>
-                    <div className="mt-2 text-3xl font-bold text-yellow-500">
-                      1
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Third Place */}
-                {topThreePlayers[2] && (
-                  <div className="bg-card border border-amber-700/30 rounded-lg p-3 text-center transition-all duration-300 hover:shadow-lg">
-                    <div className="flex justify-center mb-2">
-                      <div className="bg-amber-700/20 rounded-full p-2">
-                        {getRankIcon(2)}
+                  {/* Third Place */}
+                  {topThreePlayers[2] && (
+                    <div className="bg-card border border-amber-700/30 rounded-lg p-3 text-center transition-all duration-300 hover:shadow-lg">
+                      <div className="flex justify-center mb-2">
+                        <div className="bg-amber-700/20 rounded-full p-2">
+                          {getRankIcon(2)}
+                        </div>
+                      </div>
+                      <h3 className="font-bold text-sm text-amber-700 truncate px-1">
+                        {topThreePlayers[2].full_name}
+                      </h3>
+                      <div className="mt-2">
+                        <Badge
+                          className={`${getGroupColor(
+                            topThreePlayers[2].group_name || ""
+                          )} py-0 px-2 text-xs`}
+                        >
+                          {topThreePlayers[2].score?.toLocaleString() || "0"}
+                        </Badge>
+                      </div>
+                      <div className="mt-2 text-2xl font-bold text-amber-700">
+                        3
                       </div>
                     </div>
-                    <h3 className="font-bold text-sm text-amber-700 truncate px-1">
-                      {topThreePlayers[2].full_name}
-                    </h3>
-                    <div className="mt-2">
-                      <Badge
-                        className={`${getGroupColor(
-                          topThreePlayers[2].group_name || ""
-                        )} py-0 px-2 text-xs`}
-                      >
-                        {topThreePlayers[2].score?.toLocaleString() || "0"}
-                      </Badge>
+                  )}
+                </div>
+
+                {/* Creative Podium formation for mobile */}
+                <div className="md:hidden flex justify-center items-end h-48 space-x-2 px-4">
+                  {/* Second Place - Silver Podium */}
+                  {topThreePlayers[1] && (
+                    <div className="flex flex-col items-center w-24">
+                      <div className="bg-card border border-gray-400/30 rounded-t-lg p-3 text-center transition-all duration-300 hover:shadow-lg flex-1 flex flex-col justify-between w-full">
+                        <div>
+                          <div className="flex justify-center mb-1">
+                            <div className="bg-gray-400/20 rounded-full p-1">
+                              {getRankIcon(1)}
+                            </div>
+                          </div>
+                          <h3 className="font-bold text-xs text-gray-400 truncate">
+                            {topThreePlayers[1].full_name}
+                          </h3>
+                        </div>
+                        <div className="mt-2">
+                          <Badge
+                            className={`${getGroupColor(
+                              topThreePlayers[1].group_name || ""
+                            )} py-0 px-1 text-xs whitespace-nowrap`}
+                          >
+                            {topThreePlayers[1].score?.toLocaleString() || "0"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="bg-gray-400 text-white text-xs font-bold py-1 px-2 rounded-b-lg w-full text-center">
+                        2nd
+                      </div>
                     </div>
-                    <div className="mt-2 text-2xl font-bold text-amber-700">
-                      3
+                  )}
+
+                  {/* First Place - Gold Podium (Tallest) */}
+                  {topThreePlayers[0] && (
+                    <div className="flex flex-col items-center w-28">
+                      <div className="bg-card border-2 border-yellow-500/50 rounded-t-lg p-4 text-center transition-all duration-300 hover:shadow-lg shadow-lg shadow-yellow-500/20 flex-1 flex flex-col justify-between w-full">
+                        <div>
+                          <div className="flex justify-center mb-1">
+                            <div className="bg-yellow-500/20 rounded-full p-1">
+                              {getRankIcon(0)}
+                            </div>
+                          </div>
+                          <h3 className="font-bold text-sm text-yellow-500 truncate">
+                            {topThreePlayers[0].full_name}
+                          </h3>
+                        </div>
+                        <div className="mt-2">
+                          <Badge
+                            className={`${getGroupColor(
+                              topThreePlayers[0].group_name || ""
+                            )} py-0 px-1 text-xs font-bold whitespace-nowrap`}
+                          >
+                            {topThreePlayers[0].score?.toLocaleString() || "0"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="bg-yellow-500 text-white text-xs font-bold py-1 px-2 rounded-b-lg w-full text-center">
+                        1st
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+
+                  {/* Third Place - Bronze Podium */}
+                  {topThreePlayers[2] && (
+                    <div className="flex flex-col items-center w-20">
+                      <div className="bg-card border border-amber-700/30 rounded-t-lg p-2 text-center transition-all duration-300 hover:shadow-lg flex-1 flex flex-col justify-between w-full">
+                        <div>
+                          <div className="flex justify-center mb-1">
+                            <div className="bg-amber-700/20 rounded-full p-1">
+                              {getRankIcon(2)}
+                            </div>
+                          </div>
+                          <h3 className="font-bold text-xs text-amber-700 truncate">
+                            {topThreePlayers[2].full_name}
+                          </h3>
+                        </div>
+                        <div className="mt-1">
+                          <Badge
+                            className={`${getGroupColor(
+                              topThreePlayers[2].group_name || ""
+                            )} py-0 px-1 text-xs whitespace-nowrap`}
+                          >
+                            {topThreePlayers[2].score?.toLocaleString() || "0"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="bg-amber-700 text-white text-xs font-bold py-1 px-2 rounded-b-lg w-full text-center">
+                        3rd
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Positions 4-10 in a compact table */}

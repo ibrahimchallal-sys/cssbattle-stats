@@ -129,6 +129,7 @@ export type Database = {
           score: number | null
           updated_at: string
           verified_ofppt: boolean | null
+          video_completed: boolean | null
         }
         Insert: {
           badges?: string[] | null
@@ -143,6 +144,7 @@ export type Database = {
           score?: number | null
           updated_at?: string
           verified_ofppt?: boolean | null
+          video_completed?: boolean | null
         }
         Update: {
           badges?: string[] | null
@@ -157,6 +159,7 @@ export type Database = {
           score?: number | null
           updated_at?: string
           verified_ofppt?: boolean | null
+          video_completed?: boolean | null
         }
         Relationships: []
       }
@@ -174,6 +177,7 @@ export type Database = {
           score: number | null
           updated_at: string
           verified_ofppt: boolean | null
+          video_completed: boolean | null
         }
         Insert: {
           badges?: string[] | null
@@ -188,6 +192,7 @@ export type Database = {
           score?: number | null
           updated_at?: string
           verified_ofppt?: boolean | null
+          video_completed?: boolean | null
         }
         Update: {
           badges?: string[] | null
@@ -202,6 +207,7 @@ export type Database = {
           score?: number | null
           updated_at?: string
           verified_ofppt?: boolean | null
+          video_completed?: boolean | null
         }
         Relationships: []
       }

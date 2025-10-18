@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Mail, MailOpen, Calendar, User, Eye } from "lucide-react";
+import { X, Mail, MailOpen, Calendar, User, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/contexts/AdminContext";
 
@@ -35,6 +35,8 @@ interface Player {
   score: number;
   cssbattle_profile_link: string | null;
   phone: string | null;
+  created_at: string;
+  video_completed: boolean | null;
 }
 
 const AdminMessages = () => {
@@ -63,7 +65,7 @@ const AdminMessages = () => {
         setLoading(false);
         return;
       }
-      
+
       // Fetch messages sent to the current admin
       const { data, error } = await supabase
         .from("contact_messages")
@@ -121,118 +123,165 @@ const AdminMessages = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-foreground">Loading messages...</div>
+      <div className="fixed inset-0 z-50 overflow-hidden pointer-events-none">
+        {/* Transparent backdrop - allows background to show through */}
+        <div className="fixed inset-0 bg-black/0" />
+
+        {/* Slide-in panel */}
+        <div className="fixed inset-y-0 right-0 flex max-w-full pointer-events-auto">
+          <div className="relative w-screen max-w-md">
+            <div className="flex h-full flex-col bg-background border-l border-battle-purple/20 shadow-xl">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-6 border-b border-battle-purple/20">
+                <h2 className="text-lg font-semibold text-foreground">
+                  My Messages
+                </h2>
+              </div>
+
+              {/* Loading content */}
+              <div className="flex-1 flex items-center justify-center">
+                <div className="animate-pulse text-foreground">
+                  Loading messages...
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4 sm:px-6 mt-16">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <Button
-            onClick={() => navigate("/admin/dashboard")}
-            variant="outline"
-            className="border-primary/50"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
+    <div className="fixed inset-0 z-50 overflow-hidden pointer-events-none">
+      {/* Transparent backdrop - allows background to show through but still catches clicks */}
+      <div
+        className="fixed inset-0 bg-black/0 transition-opacity pointer-events-auto"
+        onClick={() => navigate("/admin/dashboard")}
+      />
 
-          <h1 className="text-3xl font-bold text-foreground">My Messages</h1>
-
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40 bg-background border-primary/30">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="unread">Unread</SelectItem>
-              <SelectItem value="read">Read</SelectItem>
-              <SelectItem value="replied">Replied</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {filteredMessages.length === 0 ? (
-          <Card className="p-12 text-center">
-            <Mail className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg text-muted-foreground">No messages found</p>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {filteredMessages.map((message) => (
-              <Card
-                key={message.id}
-                className="p-6 hover:shadow-lg transition-shadow"
+      {/* Slide-in panel */}
+      <div className="fixed inset-y-0 right-0 flex max-w-full pointer-events-auto">
+        <div className="relative w-screen max-w-md">
+          <div className="flex h-full flex-col bg-background border-l border-battle-purple/20 shadow-xl">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-6 border-b border-battle-purple/20">
+              <h2 className="text-lg font-semibold text-foreground">
+                My Messages
+              </h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/admin/dashboard")}
+                className="text-foreground hover:bg-battle-purple/10"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    {message.status === "unread" ? (
-                      <Mail className="w-5 h-5 text-primary" />
-                    ) : (
-                      <MailOpen className="w-5 h-5 text-muted-foreground" />
-                    )}
-                    <div>
-                      <h3 className="font-semibold text-lg text-foreground">
-                        {message.subject}
-                      </h3>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <User className="w-4 h-4" />
-                        <span>{message.sender_name}</span>
-                        <span>({message.sender_email})</span>
-                      </div>
-                    </div>
-                  </div>
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
 
-                  <div className="flex flex-col items-end gap-2">
-                    <Badge
-                      variant={
-                        message.status === "unread" ? "default" : "secondary"
-                      }
-                    >
-                      {message.status}
-                    </Badge>
-                    <div className="flex items-center text-xs text-muted-foreground">
-                      <Calendar className="w-3 h-3 mr-1" />
-                      {new Date(message.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                </div>
+            {/* Filter controls */}
+            <div className="px-4 py-3 border-b border-battle-purple/20">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full bg-background border-primary/30">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="unread">Unread</SelectItem>
+                  <SelectItem value="read">Read</SelectItem>
+                  <SelectItem value="replied">Replied</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-                <div className="p-4 bg-muted/30 rounded-lg mb-4">
-                  <p className="text-foreground whitespace-pre-wrap">
-                    {message.message}
+            {/* Messages content */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {filteredMessages.length === 0 ? (
+                <Card className="p-8 text-center">
+                  <Mail className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-lg text-muted-foreground">
+                    No messages found
                   </p>
-                </div>
-
-                <div className="flex gap-2">
-                  {message.status === "unread" && (
-                    <Button
-                      onClick={() => handleMarkAsRead(message.id)}
-                      variant="outline"
-                      size="sm"
-                      className="border-primary/50"
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {filteredMessages.map((message) => (
+                    <Card
+                      key={message.id}
+                      className="p-4 hover:shadow-lg transition-shadow"
                     >
-                      <MailOpen className="w-4 h-4 mr-2" />
-                      Mark as Read
-                    </Button>
-                  )}
-                  <Button
-                    onClick={() => handleViewPlayerDetails(message.sender_id)}
-                    variant="outline"
-                    size="sm"
-                    className="border-battle-purple/50 hover:bg-battle-purple/10"
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    View Player Details
-                  </Button>
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          {message.status === "unread" ? (
+                            <Mail className="w-4 h-4 text-primary" />
+                          ) : (
+                            <MailOpen className="w-4 h-4 text-muted-foreground" />
+                          )}
+                          <div>
+                            <h3 className="font-semibold text-foreground text-sm">
+                              {message.subject}
+                            </h3>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <User className="w-3 h-3" />
+                              <span>{message.sender_name}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge
+                            variant={
+                              message.status === "unread"
+                                ? "default"
+                                : "secondary"
+                            }
+                            className="text-xs"
+                          >
+                            {message.status}
+                          </Badge>
+                          <div className="flex items-center text-xs text-muted-foreground">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            {new Date(message.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-muted/30 rounded-lg mb-3">
+                        <p className="text-foreground text-sm whitespace-pre-wrap">
+                          {message.message}
+                        </p>
+                      </div>
+
+                      <div className="flex gap-2">
+                        {message.status === "unread" && (
+                          <Button
+                            onClick={() => handleMarkAsRead(message.id)}
+                            variant="outline"
+                            size="sm"
+                            className="border-primary/50 text-xs h-8"
+                          >
+                            <MailOpen className="w-3 h-3 mr-1" />
+                            Mark as Read
+                          </Button>
+                        )}
+                        <Button
+                          onClick={() =>
+                            handleViewPlayerDetails(message.sender_id)
+                          }
+                          variant="outline"
+                          size="sm"
+                          className="border-battle-purple/50 hover:bg-battle-purple/10 text-xs h-8"
+                        >
+                          <Eye className="w-3 h-3 mr-1" />
+                          View Player
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
                 </div>
-              </Card>
-            ))}
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

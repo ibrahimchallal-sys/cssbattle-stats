@@ -250,7 +250,7 @@ const ImportPlayersModal = ({
               variant="ghost"
               size="icon"
               onClick={handleClose}
-              className="text-foreground hover:bg-battle-purple/10"
+              className="text-foreground hover:bg-battle-purple/10 hover:text-foreground"
             >
               <X className="w-4 h-4" />
             </Button>
@@ -269,7 +269,7 @@ const ImportPlayersModal = ({
               <Button
                 onClick={handleDownloadTemplate}
                 variant="outline"
-                className="border-battle-purple/50 hover:bg-battle-purple/10"
+                className="border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground"
               >
                 <Download className="w-4 h-4 mr-2" />
                 Download Template
@@ -352,7 +352,7 @@ const ImportPlayersModal = ({
               <Button
                 onClick={handleClose}
                 variant="outline"
-                className="flex-1 border-battle-purple/50 hover:bg-battle-purple/10"
+                className="flex-1 border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground"
                 disabled={isProcessing}
               >
                 Cancel

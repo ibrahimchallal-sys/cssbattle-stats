@@ -43,18 +43,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { GROUP_OPTIONS } from "@/constants/groups";
 import { useAdmin } from "@/contexts/AdminContext";
 import ImportPlayersModal from "@/components/ImportPlayersModal";
+import MessagesPanel from "@/components/MessagesPanel";
 
 interface Player {
   id: string;
   full_name: string;
   email: string;
-  cssbattle_profile_link: string | null;
   group_name: string | null;
+  score: number;
+  cssbattle_profile_link: string | null;
   phone: string | null;
   created_at: string;
-  updated_at: string;
-  score: number;
-  verified_ofppt?: boolean | null;
+  video_completed: boolean | null;
+  verified_ofppt: boolean | null;
 }
 
 const AdminDashboard = () => {
@@ -126,6 +127,7 @@ const AdminDashboard = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [playerCount, setPlayerCount] = useState(0);
   const [cssBattleLinkCount, setCssBattleLinkCount] = useState(0);
+  const [isMessagesPanelOpen, setIsMessagesPanelOpen] = useState(false);
 
   useEffect(() => {
     // Use AdminContext to validate access and get admin email
@@ -175,12 +177,13 @@ const AdminDashboard = () => {
       }
 
       setPlayers(data || []);
-      
+
       // Update counts
       setPlayerCount(data?.length || 0);
-      
+
       // Count players with CSS Battle links
-      const cssBattleCount = data?.filter(player => player.cssbattle_profile_link)?.length || 0;
+      const cssBattleCount =
+        data?.filter((player) => player.cssbattle_profile_link)?.length || 0;
       setCssBattleLinkCount(cssBattleCount);
     } catch (err) {
       setError("Failed to fetch players");
@@ -291,7 +294,9 @@ const AdminDashboard = () => {
         }
 
         if (existingPlayers && existingPlayers.length > 0) {
-          throw new Error("CSS Battle link is already in use by another player");
+          throw new Error(
+            "CSS Battle link is already in use by another player"
+          );
         }
       }
 
@@ -385,7 +390,9 @@ const AdminDashboard = () => {
           }
 
           if (existingPlayers && existingPlayers.length > 0) {
-            throw new Error("CSS Battle link is already in use by another player");
+            throw new Error(
+              "CSS Battle link is already in use by another player"
+            );
           }
         }
 
@@ -1021,6 +1028,10 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6 mt-16">
       <Navbar />
+      <MessagesPanel
+        isOpen={isMessagesPanelOpen}
+        onClose={() => setIsMessagesPanelOpen(false)}
+      />
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -1045,14 +1056,6 @@ const AdminDashboard = () => {
           </div>
           <div className="flex gap-2">
             <Button
-              onClick={() => navigate("/admin/messages")}
-              variant="outline"
-              className="border-primary/50 hover:bg-primary/10"
-            >
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Messages
-            </Button>
-            <Button
               onClick={handleLogout}
               variant="outline"
               className="border-red-500/50 hover:bg-red-500/10"
@@ -1069,8 +1072,12 @@ const AdminDashboard = () => {
             <div className="flex items-center">
               <Users className="w-8 h-8 text-battle-purple mr-4" />
               <div>
-                <p className="text-sm font-medium text-foreground/80">Total Players</p>
-                <p className="text-2xl font-bold text-foreground">{playerCount}</p>
+                <p className="text-sm font-medium text-foreground/80">
+                  Total Players
+                </p>
+                <p className="text-2xl font-bold text-foreground">
+                  {playerCount}
+                </p>
               </div>
             </div>
           </Card>
@@ -1078,8 +1085,12 @@ const AdminDashboard = () => {
             <div className="flex items-center">
               <Link className="w-8 h-8 text-blue-500 dark:text-yellow-500 mr-4" />
               <div>
-                <p className="text-sm font-medium text-foreground/80">CSS Battle Links</p>
-                <p className="text-2xl font-bold text-foreground">{cssBattleLinkCount}</p>
+                <p className="text-sm font-medium text-foreground/80">
+                  CSS Battle Links
+                </p>
+                <p className="text-2xl font-bold text-foreground">
+                  {cssBattleLinkCount}
+                </p>
               </div>
             </div>
           </Card>
@@ -1118,7 +1129,7 @@ const AdminDashboard = () => {
                 <Button
                   onClick={() => setIsImportModalOpen(true)}
                   variant="outline"
-                  className="border-battle-purple/50 hover:bg-battle-purple/10 h-12 whitespace-nowrap"
+                  className="border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground h-12 whitespace-nowrap"
                   disabled={loading}
                 >
                   <Upload className="w-4 h-4 mr-2" />
@@ -1143,7 +1154,7 @@ const AdminDashboard = () => {
             <Button
               variant="outline"
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className="border-battle-purple/50 hover:bg-battle-purple/10"
+              className="border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground"
             >
               <SlidersHorizontal className="w-4 h-4 mr-2" />
               Advanced Filters
@@ -1263,7 +1274,7 @@ const AdminDashboard = () => {
                         setGroupCategory("all");
                         setVerificationStatus("all");
                       }}
-                      className="border-battle-purple/50 hover:bg-battle-purple/10 w-full"
+                      className="border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground w-full"
                     >
                       <X className="w-4 h-4 mr-2" />
                       Reset Filters
@@ -1330,7 +1341,7 @@ const AdminDashboard = () => {
                         <Button
                           onClick={() => handleEditPlayer(player)}
                           variant="outline"
-                          className="border-battle-purple/50 hover:bg-battle-purple/10"
+                          className="border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground"
                         >
                           <Edit className="w-4 h-4" />
                           <span className="hidden sm:inline">Edit</span>
@@ -1338,7 +1349,7 @@ const AdminDashboard = () => {
                         <Button
                           onClick={() => handleSendPasswordReset(player)}
                           variant="outline"
-                          className="border-battle-purple/50 hover:bg-battle-purple/10"
+                          className="border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground"
                         >
                           <Key className="w-4 h-4" />
                           <span className="hidden sm:inline">
@@ -1353,7 +1364,7 @@ const AdminDashboard = () => {
                             });
                           }}
                           variant="outline"
-                          className="border-battle-purple/50 hover:bg-battle-purple/10"
+                          className="border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground"
                         >
                           <Trash2 className="w-4 h-4" />
                           <span className="hidden sm:inline">Delete</span>
@@ -1377,7 +1388,7 @@ const AdminDashboard = () => {
                   variant="ghost"
                   size="icon"
                   onClick={handleCancelEdit}
-                  className="text-foreground hover:bg-battle-purple/10"
+                  className="text-foreground hover:bg-battle-purple/10 hover:text-foreground"
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -1480,7 +1491,7 @@ const AdminDashboard = () => {
                 <Button
                   onClick={handleCancelEdit}
                   variant="outline"
-                  className="flex-1 border-battle-purple/50 hover:bg-battle-purple/10"
+                  className="flex-1 border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground"
                 >
                   Cancel
                 </Button>
@@ -1510,7 +1521,7 @@ const AdminDashboard = () => {
                     onClick={() =>
                       setDeleteConfirmation({ isOpen: false, player: null })
                     }
-                    className="text-foreground hover:bg-battle-purple/10"
+                    className="text-foreground hover:bg-battle-purple/10 hover:text-foreground"
                   >
                     <X className="w-4 h-4" />
                   </Button>
@@ -1538,7 +1549,7 @@ const AdminDashboard = () => {
                       setDeleteConfirmation({ isOpen: false, player: null })
                     }
                     variant="outline"
-                    className="flex-1 border-battle-purple/50 hover:bg-battle-purple/10"
+                    className="flex-1 border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground"
                   >
                     Cancel
                   </Button>
@@ -1565,7 +1576,7 @@ const AdminDashboard = () => {
         {/* Create Player Modal */}
         {isCreateModalOpen && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <Card className="bg-card/90 backdrop-blur-sm border-battle-purple/30 w-full max-w-lg">
+            <Card className="bg-card/90 backdrop-blur-sm border-battle-purple/30 w-full max-w-lg max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-bold text-foreground">
@@ -1575,7 +1586,7 @@ const AdminDashboard = () => {
                     variant="ghost"
                     size="icon"
                     onClick={() => setIsCreateModalOpen(false)}
-                    className="text-foreground hover:bg-battle-purple/10"
+                    className="text-foreground hover:bg-battle-purple/10 hover:text-foreground"
                   >
                     <X className="w-4 h-4" />
                   </Button>
@@ -1660,7 +1671,10 @@ const AdminDashboard = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="cssbattle_profile_link" className="text-foreground">
+                    <Label
+                      htmlFor="cssbattle_profile_link"
+                      className="text-foreground"
+                    >
                       CSSBattle Profile Link
                     </Label>
                     <Input
@@ -1697,18 +1711,18 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                <div className="flex gap-3 pt-6">
+                <div className="flex flex-col sm:flex-row gap-3 pt-6">
                   <Button
                     onClick={() => setIsCreateModalOpen(false)}
                     variant="outline"
-                    className="flex-1 border-battle-purple/50 hover:bg-battle-purple/10"
+                    className="w-full sm:w-1/2 border-battle-purple/50 hover:bg-battle-purple/10"
                     disabled={isCreating}
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleCreatePlayer}
-                    className="flex-1 bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
+                    className="w-full sm:w-1/2 bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
                     disabled={isCreating}
                   >
                     {isCreating ? "Creating..." : "Create Player"}
@@ -1818,5 +1832,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-
-

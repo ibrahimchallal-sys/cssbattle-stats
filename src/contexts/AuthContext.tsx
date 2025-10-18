@@ -18,6 +18,7 @@ interface User {
   email_confirmed_at?: string;
   group_name?: string;
   phone?: string;
+  video_completed?: boolean;
 }
 
 interface AuthContextType {
@@ -55,12 +56,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data: profile, error } = await supabase
         .from("players")
         .select(
-          "id, full_name, email, cssbattle_profile_link, group_name, phone"
+          "id, full_name, email, cssbattle_profile_link, group_name, phone, video_completed"
         )
         .eq("email", session.user.email)
         .maybeSingle();
 
       if (!error && profile) {
+        // Fetch unread message count for the player
+        const unreadCount = await fetchUnreadMessageCount(profile.email);
+
         return {
           id: profile.id,
           email: profile.email,
@@ -69,6 +73,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           email_confirmed_at: session.user.email_confirmed_at,
           group_name: profile.group_name || undefined,
           phone: profile.phone || undefined,
+          video_completed: profile.video_completed || false,
+          unreadMessageCount: unreadCount,
         };
       } else {
         return {
@@ -76,6 +82,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           email: session.user.email!,
           full_name: session.user.email!,
           email_confirmed_at: session.user.email_confirmed_at,
+          video_completed: false,
+          unreadMessageCount: 0,
         };
       }
     } catch (error) {
@@ -85,7 +93,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         email: session.user.email!,
         full_name: session.user.email!,
         email_confirmed_at: session.user.email_confirmed_at,
+        video_completed: false,
+        unreadMessageCount: 0,
       };
+    }
+  };
+
+  // Fetch unread message count for a player
+  const fetchUnreadMessageCount = async (
+    playerEmail?: string
+  ): Promise<number> => {
+    if (!playerEmail) return 0;
+
+    try {
+      const { count, error } = await supabase
+        .from("contact_messages")
+        .select("*", { count: "exact", head: true })
+        .eq("recipient_email", playerEmail)
+        .eq("status", "unread");
+
+      if (!error && count !== null) {
+        return count;
+      }
+      return 0;
+    } catch (error) {
+      console.error("Error fetching unread message count:", error);
+      return 0;
     }
   };
 
@@ -159,13 +192,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
+    // Listen for player messages read event
+    const handlePlayerMessagesRead = () => {
+      if (user?.email) {
+        fetchUnreadMessageCount(user.email).then((count) => {
+          if (mounted) {
+            setUser((prevUser) =>
+              prevUser ? { ...prevUser, unreadMessageCount: count } : null
+            );
+          }
+        });
+      }
+    };
+
+    window.addEventListener("playerMessagesRead", handlePlayerMessagesRead);
+
     return () => {
       mounted = false;
       if (subscription?.unsubscribe) {
         subscription.unsubscribe();
       }
+      window.removeEventListener(
+        "playerMessagesRead",
+        handlePlayerMessagesRead
+      );
     };
-  }, []);
+  }, [user?.email]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -205,11 +257,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
+    console.log("AuthContext logout called");
     try {
       await supabase.auth.signOut();
       setUser(null);
       // Clear any stored auth data
       safeLocalStorage.removeItem("hardcoded_admin");
+      console.log("AuthContext logout completed");
     } catch (error) {
       console.error("Error during logout:", error);
     }
@@ -245,11 +299,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .eq("cssbattle_profile_link", userData.cssLink);
 
           if (checkError) {
-            return { success: false, error: `Database error: ${checkError.message}` };
+            return {
+              success: false,
+              error: `Database error: ${checkError.message}`,
+            };
           }
 
           if (existingPlayers && existingPlayers.length > 0) {
-            return { success: false, error: "CSS Battle link is already in use by another player" };
+            return {
+              success: false,
+              error: "CSS Battle link is already in use by another player",
+            };
           }
         }
 

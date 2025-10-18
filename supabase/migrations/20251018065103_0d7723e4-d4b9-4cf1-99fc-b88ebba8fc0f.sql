@@ -8,6 +8,10 @@ CREATE TABLE public.quiz_scores (
   quiz_title TEXT NOT NULL DEFAULT 'CSS Battle Quiz'
 );
 
+-- Add unique constraint to prevent duplicate quiz scores per player
+ALTER TABLE public.quiz_scores 
+ADD CONSTRAINT unique_player_quiz_score UNIQUE (player_id);
+
 -- Enable RLS
 ALTER TABLE public.quiz_scores ENABLE ROW LEVEL SECURITY;
 

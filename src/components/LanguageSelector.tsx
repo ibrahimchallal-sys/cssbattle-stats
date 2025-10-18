@@ -14,7 +14,7 @@ const LanguageSelector = () => {
       variant="ghost"
       size="icon"
       onClick={toggleLanguage}
-      className="text-foreground hover:bg-battle-purple/10"
+      className="text-foreground hover:bg-battle-purple/10 hover:text-foreground"
       title={language === "en" ? "Français" : "English"}
     >
       <Globe className="h-5 w-5" />

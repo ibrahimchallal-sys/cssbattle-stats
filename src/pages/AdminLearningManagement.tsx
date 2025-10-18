@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { createLearningBucket } from "@/lib/storageUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +61,7 @@ const AdminLearningManagement = () => {
   const [resources, setResources] = useState<LearningResource[]>([]);
   const [showAddResource, setShowAddResource] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [creatingBucket, setCreatingBucket] = useState(false);
   const [newResource, setNewResource] = useState({
     title: "",
     description: "",
@@ -68,6 +70,30 @@ const AdminLearningManagement = () => {
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  const fetchData = async () => {
+    setLoading(true);
+    await Promise.all([fetchQuizScores(), fetchResources()]);
+    setLoading(false);
+  };
+
+  // Check if the learning bucket exists when the component mounts
+  const checkBucket = async () => {
+    try {
+      const { data, error } = await supabase.storage.getBucket("learning");
+
+      if (error && error.message.includes("not found")) {
+        toast({
+          title: "Storage Bucket Missing",
+          description:
+            "The 'learning' storage bucket doesn't exist. Please click 'Create Bucket' above to create it.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error checking bucket:", error);
+    }
+  };
+
   useEffect(() => {
     if (adminLoading) return;
     if (!isAdmin) {
@@ -75,19 +101,52 @@ const AdminLearningManagement = () => {
       return;
     }
     fetchData();
-    
+    checkBucket();
+
     // Set up periodic refresh every 30 seconds
     const interval = setInterval(() => {
       fetchQuizScores();
     }, 30000);
-    
+
     return () => clearInterval(interval);
   }, [isAdmin, adminLoading, navigate]);
 
-  const fetchData = async () => {
-    setLoading(true);
-    await Promise.all([fetchQuizScores(), fetchResources()]);
-    setLoading(false);
+  const handleCreateBucket = async () => {
+    if (!admin) {
+      toast({
+        title: "Error",
+        description: "Admin privileges required to create storage bucket",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setCreatingBucket(true);
+      const { success, message } = await createLearningBucket();
+
+      if (success) {
+        toast({
+          title: "Success",
+          description: message,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error creating bucket:", error);
+      toast({
+        title: "Error",
+        description: `Failed to create bucket: ${error.message || error}`,
+        variant: "destructive",
+      });
+    } finally {
+      setCreatingBucket(false);
+    }
   };
 
   const fetchQuizScores = async () => {
@@ -139,7 +198,21 @@ const AdminLearningManagement = () => {
   };
 
   const handleFileUpload = async () => {
-    if (!selectedFile || !admin) return null;
+    if (!selectedFile || !admin) {
+      console.log("No file selected or no admin user");
+      return null;
+    }
+
+    // Check file size (limit to 50MB)
+    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      toast({
+        title: "Error",
+        description: "File size exceeds 50MB limit",
+        variant: "destructive",
+      });
+      return null;
+    }
 
     try {
       setUploadingFile(true);
@@ -149,22 +222,74 @@ const AdminLearningManagement = () => {
         .substring(7)}.${fileExt}`;
       const filePath = `resources/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("learning")
-        .upload(filePath, selectedFile);
+      console.log("Attempting to upload file:", {
+        name: selectedFile.name,
+        size: selectedFile.size,
+        type: selectedFile.type,
+        filePath: filePath,
+      });
 
-      if (uploadError) throw uploadError;
+      // First, let's check if we can access the storage bucket
+      const { data: bucketData, error: bucketError } =
+        await supabase.storage.getBucket("learning");
+
+      if (bucketError) {
+        console.error("Bucket access error:", bucketError);
+
+        // If bucket doesn't exist, provide helpful instructions
+        if (bucketError.message && bucketError.message.includes("not found")) {
+          toast({
+            title: "Storage Bucket Missing",
+            description:
+              "The 'learning' storage bucket doesn't exist. Please click 'Create Bucket' button above to create it, or contact your system administrator.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: `Cannot access storage bucket: ${bucketError.message}`,
+            variant: "destructive",
+          });
+        }
+        return null;
+      }
+
+      console.log("Bucket access successful:", bucketData);
+
+      const { data, error: uploadError } = await supabase.storage
+        .from("learning")
+        .upload(filePath, selectedFile, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error("Detailed upload error:", uploadError.message);
+        console.error(
+          "Full error details:",
+          JSON.stringify(uploadError, null, 2)
+        );
+        toast({
+          title: "Error",
+          description: `Failed to upload file: ${uploadError.message}`,
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      console.log("Upload successful:", data);
 
       const {
         data: { publicUrl },
       } = supabase.storage.from("learning").getPublicUrl(filePath);
 
+      console.log("Public URL generated:", publicUrl);
       return publicUrl;
     } catch (error) {
-      console.error("File upload failed:", error);
+      console.error("Unexpected error during file upload:", error);
       toast({
         title: "Error",
-        description: "Failed to upload file",
+        description: `Unexpected error: ${error.message || error}`,
         variant: "destructive",
       });
       return null;
@@ -174,12 +299,28 @@ const AdminLearningManagement = () => {
   };
 
   const handleAddResource = async () => {
-    if (!admin) return;
-
-    if (!newResource.title || (!newResource.url && !selectedFile)) {
+    if (!admin) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
+        description: "Admin user not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!newResource.title) {
+      toast({
+        title: "Error",
+        description: "Please enter a title for the resource",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!newResource.url && !selectedFile) {
+      toast({
+        title: "Error",
+        description: "Please either upload a file or enter a URL",
         variant: "destructive",
       });
       return;
@@ -191,11 +332,15 @@ const AdminLearningManagement = () => {
       let resourceUrl = newResource.url;
       if (selectedFile) {
         const uploadedUrl = await handleFileUpload();
-        if (!uploadedUrl) return;
+        if (!uploadedUrl) {
+          // File upload failed, stop the process
+          console.log("File upload failed, stopping resource creation");
+          return;
+        }
         resourceUrl = uploadedUrl;
       }
 
-      const { error } = await supabase.from("learning_resources").insert({
+      console.log("Inserting resource into database:", {
         title: newResource.title,
         description: newResource.description || "",
         url: resourceUrl,
@@ -203,7 +348,20 @@ const AdminLearningManagement = () => {
         created_by: admin.id,
       });
 
-      if (error) throw error;
+      const { data, error } = await supabase.from("learning_resources").insert({
+        title: newResource.title,
+        description: newResource.description || "",
+        url: resourceUrl,
+        type: newResource.type,
+        created_by: admin.id,
+      });
+
+      if (error) {
+        console.error("Database insert error:", error);
+        throw error;
+      }
+
+      console.log("Resource inserted successfully:", data);
 
       toast({
         title: "Success",
@@ -223,7 +381,7 @@ const AdminLearningManagement = () => {
       console.error("Failed to add resource:", error);
       toast({
         title: "Error",
-        description: "Failed to add resource",
+        description: `Failed to add resource: ${error.message || error}`,
         variant: "destructive",
       });
     } finally {
@@ -353,14 +511,25 @@ const AdminLearningManagement = () => {
                   <BookOpen className="w-5 h-5 mr-2 text-primary" />
                   Learning Resources
                 </CardTitle>
-                <Button
-                  onClick={() => setShowAddResource(!showAddResource)}
-                  size="sm"
-                  className="bg-gradient-primary"
-                >
-                  <PlusCircle className="w-4 h-4 mr-2" />
-                  Add Resource
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleCreateBucket}
+                    disabled={creatingBucket}
+                    variant="outline"
+                    size="sm"
+                    className="border-primary/50"
+                  >
+                    {creatingBucket ? "Creating..." : "Create Bucket"}
+                  </Button>
+                  <Button
+                    onClick={() => setShowAddResource(!showAddResource)}
+                    size="sm"
+                    className="bg-gradient-primary"
+                  >
+                    <PlusCircle className="w-4 h-4 mr-2" />
+                    Add Resource
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -399,9 +568,9 @@ const AdminLearningManagement = () => {
                       <Label>Type</Label>
                       <Select
                         value={newResource.type}
-                        onValueChange={(value: any) =>
-                          setNewResource({ ...newResource, type: value })
-                        }
+                        onValueChange={(
+                          value: "link" | "pdf" | "doc" | "video"
+                        ) => setNewResource({ ...newResource, type: value })}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -419,9 +588,18 @@ const AdminLearningManagement = () => {
                       <div className="flex gap-2 mt-2">
                         <Input
                           type="file"
-                          onChange={(e) =>
-                            setSelectedFile(e.target.files?.[0] || null)
-                          }
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            console.log("File selected:", file);
+                            if (file) {
+                              console.log("File details:", {
+                                name: file.name,
+                                size: file.size,
+                                type: file.type,
+                              });
+                            }
+                            setSelectedFile(file);
+                          }}
                           className="flex-1"
                         />
                         <span className="text-muted-foreground self-center">

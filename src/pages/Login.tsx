@@ -6,6 +6,7 @@ import PasswordInput from "@/components/PasswordInput";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAdmin } from "@/contexts/AdminContext"; // Add this import
 import { useState, useEffect } from "react";
 import { Mail, Lock, ArrowLeft, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 const Login = () => {
   const navigate = useNavigate();
   const { login, user } = useAuth();
+  const { isAdmin, logout: adminLogout } = useAdmin(); // Get admin context and logout function
   const { t, language } = useLanguage();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
@@ -46,6 +48,19 @@ const Login = () => {
     setShowEmailVerificationMessage(false);
 
     try {
+      // If admin is currently logged in, log them out first
+      if (isAdmin) {
+        console.log("Logging out admin session before player login");
+        await adminLogout();
+        toast({
+          title: language === "en" ? "Session Switched" : "Session changée",
+          description:
+            language === "en"
+              ? "You have been logged out as admin. Logging in as player..."
+              : "Vous avez été déconnecté en tant qu'administrateur. Connexion en tant que joueur...",
+        });
+      }
+
       console.log("Login - Attempting login with:", formData.email);
       const result = await login(formData.email, formData.password);
       console.log("Login - Result:", result);
@@ -95,23 +110,15 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 text-foreground hover:bg-battle-purple/10"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            {language === "en" ? "Back to Home" : "Retour à l'accueil"}
-          </Button>
-          <h1 className="text-3xl font-bold text-center flex-1 text-foreground">
+        <div className="flex items-center justify-center mb-8 pt-16">
+          {" "}
+          {/* Added pt-16 to account for fixed navbar */}
+          <h1 className="text-2xl font-bold text-center text-foreground">
             CSS{" "}
             <span className="bg-gradient-primary bg-clip-text text-transparent">
               BATTLE
-            </span>{" "}
-            {language === "en" ? "Championship" : "Championnat"}
+            </span>
           </h1>
-          <div className="w-24"></div> {/* Spacer for alignment */}
         </div>
 
         <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 p-6 md:p-8 max-w-md mx-auto">
@@ -197,7 +204,9 @@ const Login = () => {
               <Button
                 type="button"
                 variant="link"
-                onClick={() => navigate("/register")}
+                onClick={() =>
+                  window.open("https://css-battle-isfo.vercel.app/", "_blank")
+                }
                 className="px-0 text-battle-purple hover:text-battle-pink"
               >
                 {language === "en"
@@ -210,7 +219,9 @@ const Login = () => {
                 onClick={() => navigate("/password-reset")}
                 className="px-0 text-battle-purple hover:text-battle-pink"
               >
-                {language === "en" ? "Forgot Password?" : "Mot de passe oublié ?"}
+                {language === "en"
+                  ? "Forgot Password?"
+                  : "Mot de passe oublié ?"}
               </Button>
             </div>
 
@@ -219,7 +230,7 @@ const Login = () => {
                 type="button"
                 variant="outline"
                 onClick={() => navigate("/")}
-                className="flex-1 border-battle-purple/50 hover:bg-battle-purple/10"
+                className="flex-1 border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground"
               >
                 {language === "en" ? "Cancel" : "Annuler"}
               </Button>

@@ -122,88 +122,85 @@ const Index = () => {
       </section>
 
       {/* Info Cards */}
-      <section className="relative z-10 container mx-auto px-4 pb-12 md:pb-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-          <Card className="bg-card/50 backdrop-blur-sm border-battle-pink/30 p-6 md:p-8 hover:scale-105 transition-transform hover:shadow-glow-pink">
-            <div className="w-12 h-12 md:w-16 md:h-16 bg-battle-pink rounded-lg flex items-center justify-center mb-4 shadow-glow-pink">
-              <Users className="w-6 h-6 md:w-8 md:h-8 text-background" />
+      <section className="relative z-10 container mx-auto px-4 pb-8 md:pb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto">
+          <Card className="bg-card/50 backdrop-blur-sm border-battle-pink/30 p-4 md:p-6 hover:scale-105 transition-transform hover:shadow-glow-pink">
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-battle-pink rounded-lg flex items-center justify-center mb-3 shadow-glow-pink">
+              <Users className="w-5 h-5 md:w-6 md:h-6 text-background" />
             </div>
-            <h3 className="text-xl md:text-2xl font-bold mb-2 text-foreground">
+            <h3 className="text-lg md:text-xl font-bold mb-1 text-foreground">
               {language === "en" ? "Players" : "Joueurs"}
             </h3>
-            <p className="text-2xl md:text-3xl font-bold text-battle-pink mb-2">
+            <p className="text-xl md:text-2xl font-bold text-battle-pink mb-1">
               {playerCount !== null ? playerCount.toLocaleString() : "20+"}
             </p>
-            <p className="text-foreground/70">
+            <p className="text-sm text-foreground/70">
               {language === "en"
                 ? "Developers competing"
                 : "Développeurs en compétition"}
             </p>
           </Card>
 
-          <Card className="bg-card/50 backdrop-blur-sm border-battle-accent/30 p-6 md:p-8 hover:scale-105 transition-transform hover:shadow-glow-accent">
-            <div className="w-12 h-12 md:w-16 md:h-16 bg-battle-accent rounded-lg flex items-center justify-center mb-4 shadow-glow-accent">
-              <Code2 className="w-6 h-6 md:w-8 md:h-8 text-background" />
+          <Card className="bg-card/50 backdrop-blur-sm border-battle-accent/30 p-4 md:p-6 hover:scale-105 transition-transform hover:shadow-glow-accent">
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-battle-accent rounded-lg flex items-center justify-center mb-3 shadow-glow-accent">
+              <Code2 className="w-5 h-5 md:w-6 md:h-6 text-background" />
             </div>
-            <h3 className="text-xl md:text-2xl font-bold mb-2 text-foreground">
+            <h3 className="text-lg md:text-xl font-bold mb-1 text-foreground">
               {language === "en" ? "Challenges" : "Défis"}
             </h3>
-            <p className="text-2xl md:text-3xl font-bold text-battle-accent mb-2">
+            <p className="text-xl md:text-2xl font-bold text-battle-accent mb-1">
               50+
             </p>
-            <p className="text-foreground/70">
+            <p className="text-sm text-foreground/70">
               {language === "en"
                 ? "Unique CSS battles"
                 : "Batailles CSS uniques"}
             </p>
           </Card>
-        </div>
 
-        {/* Daily Challenge Card */}
-        <Card className="mt-6 bg-card/50 backdrop-blur-sm border-battle-purple/30 p-6 md:p-8 hover:scale-105 transition-transform hover:shadow-glow">
-          <div className="flex flex-col items-center text-center">
-            <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-primary rounded-lg flex items-center justify-center mb-4 shadow-glow">
-              <Trophy className="w-6 h-6 md:w-8 md:h-8 text-foreground" />
+          <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 p-4 md:p-6 hover:scale-105 transition-transform hover:shadow-glow">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-3 shadow-glow">
+                <Trophy className="w-5 h-5 md:w-6 md:h-6 text-foreground" />
+              </div>
+              <h3 className="text-lg md:text-xl font-bold mb-1 text-foreground">
+                {language === "en" ? "Daily Challenge" : "Défi Quotidien"}
+              </h3>
+              <p className="text-sm text-foreground/70 mb-3">
+                {language === "en"
+                  ? "Test your skills"
+                  : "Testez vos compétences"}
+              </p>
+              <a
+                href="https://cssbattle.dev/daily"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center bg-gradient-primary text-foreground px-4 py-2 rounded-lg text-sm font-semibold hover:scale-105 transition-transform shadow-glow"
+              >
+                {language === "en" ? "Take Challenge" : "Relever le Défi"}
+              </a>
             </div>
-            <h3 className="text-xl md:text-2xl font-bold mb-2 text-foreground">
-              {language === "en" ? "Daily Challenge" : "Défi Quotidien"}
-            </h3>
-            <p className="text-foreground/70 mb-4">
-              {language === "en"
-                ? "Test your skills with today's CSS battle"
-                : "Testez vos compétences avec la bataille CSS d'aujourd'hui"}
-            </p>
-            <a
-              href="https://cssbattle.dev/daily"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center bg-gradient-primary text-foreground px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform shadow-glow"
-            >
-              {language === "en"
-                ? "Take on the Daily Challenge"
-                : "Relever le Défi Quotidien"}
-            </a>
-          </div>
-        </Card>
+          </Card>
+        </div>
       </section>
 
       {/* Event Details */}
       <section className="relative z-10 container mx-auto px-4 pb-12 md:pb-20">
-        <Card className="bg-gradient-primary p-8 md:p-12 text-center shadow-glow max-w-4xl mx-auto">
-          <div className="flex flex-wrap gap-4 justify-center text-sm md:text-base">
-            <div className="bg-background/20 backdrop-blur-sm px-4 md:px-6 py-2 md:py-3 rounded-lg">
+        <Card className="bg-gradient-primary p-6 md:p-8 text-center shadow-glow max-w-3xl mx-auto">
+          <div className="flex flex-wrap gap-3 justify-center text-sm md:text-base">
+            <div className="bg-background/20 backdrop-blur-sm px-3 md:px-5 py-1.5 md:py-2 rounded-lg">
               <span className="text-foreground/80">
                 {language === "en" ? "Online Event" : "Événement en Ligne"}
               </span>
             </div>
-            <div className="bg-background/20 backdrop-blur-sm px-4 md:px-6 py-2 md:py-3 rounded-lg">
+            <div className="bg-background/20 backdrop-blur-sm px-3 md:px-5 py-1.5 md:py-2 rounded-lg">
               <span className="text-foreground/80">
                 {language === "en"
                   ? "All Skill Levels"
                   : "Tous Niveaux de Compétence"}
               </span>
             </div>
-            <div className="bg-background/20 backdrop-blur-sm px-4 md:px-6 py-2 md:py-3 rounded-lg">
+            <div className="bg-background/20 backdrop-blur-sm px-3 md:px-5 py-1.5 md:py-2 rounded-lg">
               <span className="text-foreground/80">
                 {language === "en"
                   ? "Live Leaderboard"
@@ -213,7 +210,7 @@ const Index = () => {
           </div>
 
           {/* Monthly Counter Card */}
-          <Card className="mt-8 bg-background/30 backdrop-blur-sm border-foreground/20 p-6">
+          <Card className="mt-8 bg-background/30 backdrop-blur-sm border-foreground/20 p-6 max-w-md mx-auto">
             <div className="flex items-center justify-center gap-3 mb-2">
               <Calendar className="w-5 h-5 text-foreground" />
               <h3 className="text-lg md:text-xl font-bold text-foreground">

@@ -13,6 +13,7 @@ import {
   Users,
   Trophy,
   Calendar,
+  Play,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/contexts/AdminContext";
@@ -27,6 +28,7 @@ interface Player {
   cssbattle_profile_link: string | null;
   phone: string | null;
   created_at: string;
+  video_completed: boolean | null;
 }
 
 const AdminPlayerDetails = () => {
@@ -45,7 +47,7 @@ const AdminPlayerDetails = () => {
       return;
     }
     if (!playerId) {
-      navigate("/admin/messages");
+      navigate("/admin/dashboard");
       return;
     }
     fetchPlayerDetails();
@@ -97,10 +99,10 @@ const AdminPlayerDetails = () => {
             Unable to load player details.
           </p>
           <Button
-            onClick={() => navigate("/admin/messages")}
+            onClick={() => navigate("/admin/dashboard")}
             className="bg-gradient-primary hover:scale-105 transition-transform"
           >
-            Back to Messages
+            Back to Dashboard
           </Button>
         </Card>
       </div>
@@ -117,12 +119,12 @@ const AdminPlayerDetails = () => {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <Button
-            onClick={() => navigate("/admin/messages")}
+            onClick={() => navigate("/admin/dashboard")}
             variant="outline"
             className="border-primary/50"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Messages
+            Back to Dashboard
           </Button>
           <h1 className="text-3xl font-bold text-foreground">Player Details</h1>
           <div></div> {/* Spacer for alignment */}
@@ -225,6 +227,22 @@ const AdminPlayerDetails = () => {
                       </p>
                     </div>
                   </div>
+
+                  <div className="flex items-start">
+                    <Play className="w-5 h-5 text-muted-foreground mt-0.5 mr-3 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Video Completed
+                      </p>
+                      <p className="text-foreground font-bold">
+                        {player.video_completed ? (
+                          <span className="text-green-500">Yes</span>
+                        ) : (
+                          <span className="text-red-500">No</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -234,7 +252,7 @@ const AdminPlayerDetails = () => {
                   variant="outline"
                   className="border-primary/50"
                 >
-                  Manage in Dashboard
+                  Back to Dashboard
                 </Button>
               </div>
             </div>

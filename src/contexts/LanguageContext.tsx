@@ -28,6 +28,7 @@ const translations = {
     "navbar.contact": "Contact",
     "navbar.dashboard": "Dashboard",
     "navbar.messages": "Messages",
+    "navbar.manageLearning": "Manage Learning", // Add this line
     "navbar.logout": "Logout",
     "navbar.login": "Log in",
     "navbar.register": "Sign up",
@@ -45,7 +46,8 @@ const translations = {
     "learning.quiz.watchVideo": "Watch Video",
     "learning.quiz.completed": "Quiz Completed!",
     "learning.quiz.score": "You scored {score}/{total}",
-    "learning.quiz.completedMessage": "Congratulations! You have successfully completed the quiz. This section will remain hidden even after you log out.",
+    "learning.quiz.completedMessage":
+      "Congratulations! You have successfully completed the quiz. This section will remain hidden even after you log out.",
     "learning.quiz.question": "Question {current} of {total}",
     "learning.quiz.submit": "Submit Answer",
     "learning.quiz.next": "Next Question",
@@ -127,6 +129,7 @@ const translations = {
     "navbar.contact": "Contact",
     "navbar.dashboard": "Tableau de bord",
     "navbar.messages": "Messages",
+    "navbar.manageLearning": "Gérer l'Apprentissage", // Add this line
     "navbar.logout": "Déconnexion",
     "navbar.login": "Connexion",
     "navbar.register": "S'inscrire",
@@ -144,7 +147,8 @@ const translations = {
     "learning.quiz.watchVideo": "Regarder la Vidéo",
     "learning.quiz.completed": "Quiz Terminé !",
     "learning.quiz.score": "Vous avez obtenu {score}/{total}",
-    "learning.quiz.completedMessage": "Félicitations ! Vous avez terminé avec succès le quiz. Cette section restera masquée même après votre déconnexion.",
+    "learning.quiz.completedMessage":
+      "Félicitations ! Vous avez terminé avec succès le quiz. Cette section restera masquée même après votre déconnexion.",
     "learning.quiz.question": "Question {current} sur {total}",
     "learning.quiz.submit": "Soumettre la Réponse",
     "learning.quiz.next": "Question Suivante",

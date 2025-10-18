@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Play,
   Pause,
@@ -39,7 +40,7 @@ interface QuizQuestion {
 }
 
 interface LearningResource {
-  id: number;
+  id: string; // Changed from number to string to match database
   title: string;
   description: string;
   url: string;
@@ -77,17 +78,18 @@ const LearningCenter = () => {
   useEffect(() => {
     // Reset the check flag when user changes
     setQuizCompletionChecked(false);
-    
+
     const checkQuizCompletion = async () => {
       if (!user) return;
-      
+
       // Small delay to ensure user object is fully loaded
       setTimeout(async () => {
         try {
           // First check localStorage for immediate UI update
           const completionKey = `quiz_completed_${user.id}`;
-          const localStorageCompleted = localStorage.getItem(completionKey) === 'true';
-          
+          const localStorageCompleted =
+            localStorage.getItem(completionKey) === "true";
+
           if (localStorageCompleted) {
             setQuizCompleted(true);
             // Also restore the quiz score if available
@@ -100,29 +102,32 @@ const LearningCenter = () => {
             setQuizCompletionChecked(true);
             return;
           }
-          
+
           // If not in localStorage, check database
-          console.log("Checking quiz completion in database for user:", user.id);
+          console.log(
+            "Checking quiz completion in database for user:",
+            user.id
+          );
           const { data, error } = await supabase
             .from("quiz_scores")
             .select("score")
             .eq("player_id", user.id)
             .limit(1);
-            
+
           if (error) {
             console.error("Error checking quiz completion in database:", error);
             setQuizCompletionChecked(true);
             return;
           }
-          
+
           if (data && data.length > 0) {
             console.log("Quiz completion found in database:", data[0]);
             setQuizCompleted(true);
             setQuizScore(data[0].score);
-            setScoreSaved(true);
-            
+            // We only set scoreSaved to true when actually saving a new score
+
             // Also save to localStorage for faster loading next time
-            localStorage.setItem(completionKey, 'true');
+            localStorage.setItem(completionKey, "true");
             const scoreKey = `quiz_score_${user.id}`;
             localStorage.setItem(scoreKey, data[0].score.toString());
           }
@@ -139,18 +144,52 @@ const LearningCenter = () => {
 
   // Save quiz score when completed
   useEffect(() => {
-    const saveScore = async () => {
+    const saveScore = async (finalScore: number) => {
       if (!user) return;
+
       try {
-        console.log("Saving quiz score to database for user:", user.id, "score:", quizScore);
+        // First, check if a score already exists for this user
+        console.log("Checking if quiz score already exists for user:", user.id);
+        const { data: existingData, error: checkError } = await supabase
+          .from("quiz_scores")
+          .select("id")
+          .eq("player_id", user.id)
+          .limit(1);
+
+        if (checkError) {
+          console.error("Error checking existing quiz score:", checkError);
+          toast({
+            title: "Error",
+            description: "Failed to check quiz status. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // If score already exists, don't insert again
+        if (existingData && existingData.length > 0) {
+          console.log(
+            "Quiz score already exists for user, not inserting again"
+          );
+          setScoreSaved(true); // Set scoreSaved to true to prevent future attempts
+          return;
+        }
+
+        // If no existing score, insert the new one
+        console.log(
+          "Saving quiz score to database for user:",
+          user.id,
+          "score:",
+          finalScore
+        );
         const { data, error } = await supabase.from("quiz_scores").insert({
           player_id: user.id,
-          score: quizScore,
+          score: finalScore,
           total_questions: quizQuestions.length,
           quiz_title: "Learning Center Quiz",
-          completed_at: new Date().toISOString()
+          completed_at: new Date().toISOString(),
         });
-        
+
         if (error) {
           console.error("Error saving quiz score to database:", error);
           toast({
@@ -160,22 +199,22 @@ const LearningCenter = () => {
           });
           return;
         }
-        
+
         console.log("Quiz score saved to database successfully:", data);
-        setScoreSaved(true);
-        setQuizCompleted(true); // Ensure quiz is marked as completed
-        
+        setScoreSaved(true); // Only set this to true when we actually save
+
         // Also save completion status in localStorage
         const completionKey = `quiz_completed_${user.id}`;
-        localStorage.setItem(completionKey, 'true');
+        localStorage.setItem(completionKey, "true");
         const scoreKey = `quiz_score_${user.id}`;
-        localStorage.setItem(scoreKey, quizScore.toString());
+        localStorage.setItem(scoreKey, finalScore.toString());
         console.log("Quiz completion status saved to localStorage");
-        
+
         // Show success message to user
         toast({
           title: "Success",
-          description: "Quiz completed successfully! Your score has been saved and the quiz is now permanently completed.",
+          description:
+            "Quiz completed successfully! Your score has been saved and the quiz is now permanently completed.",
         });
       } catch (e) {
         console.error("Failed to save quiz score", e);
@@ -189,9 +228,9 @@ const LearningCenter = () => {
 
     if (quizCompleted && !scoreSaved) {
       console.log("Quiz completed, saving score...");
-      saveScore();
+      saveScore(quizScore);
     }
-  }, [quizCompleted, scoreSaved, user, quizScore]);
+  }, [quizCompleted, scoreSaved, user]);
 
   // Resource state
   const [resources, setResources] = useState<LearningResource[]>([]);
@@ -207,13 +246,15 @@ const LearningCenter = () => {
           .order("created_at", { ascending: false });
 
         if (error) throw error;
-        setResources((data || []).map(r => ({
-          id: parseInt(r.id),
-          title: r.title,
-          description: r.description || "",
-          url: r.url,
-          type: r.type as "pdf" | "doc" | "link" | "video"
-        })));
+        setResources(
+          (data || []).map((r) => ({
+            id: r.id,
+            title: r.title,
+            description: r.description || "",
+            url: r.url,
+            type: r.type as "pdf" | "doc" | "link" | "video",
+          }))
+        );
       } catch (error) {
         console.error("Failed to fetch resources:", error);
       } finally {
@@ -235,7 +276,7 @@ const LearningCenter = () => {
   // File upload state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  // Sample quiz questions
+  // Sample quiz questions - 5 basic questions + 1 advanced question
   const quizQuestions: QuizQuestion[] = [
     {
       id: 1,
@@ -310,6 +351,72 @@ const LearningCenter = () => {
           ? "CSS Battle challenges often require a combination of properties, including positioning, background colors, and clip-path for complex shapes."
           : "Les défis CSS Battle nécessitent souvent une combinaison de propriétés, notamment le positionnement, les couleurs d'arrière-plan et clip-path pour les formes complexes.",
     },
+    {
+      id: 4,
+      question:
+        language === "en" ? "What does CSS stand for?" : "Que signifie CSS ?",
+      options:
+        language === "en"
+          ? [
+              "Computer Style Sheets",
+              "Creative Style System",
+              "Cascading Style Sheets",
+              "Colorful Style Sheets",
+            ]
+          : [
+              "Computer Style Sheets",
+              "Creative Style System",
+              "Cascading Style Sheets",
+              "Colorful Style Sheets",
+            ],
+      correctAnswer: 2,
+      explanation:
+        language === "en"
+          ? "CSS stands for Cascading Style Sheets, which is used to style and layout web pages."
+          : "CSS signifie Cascading Style Sheets, utilisé pour styliser et mettre en page les pages web.",
+    },
+    {
+      id: 5,
+      question:
+        language === "en"
+          ? "Which CSS property is used to change the text color?"
+          : "Quelle propriété CSS est utilisée pour changer la couleur du texte ?",
+      options:
+        language === "en"
+          ? ["font-color", "text-color", "color", "text-style"]
+          : ["font-color", "text-color", "color", "text-style"],
+      correctAnswer: 2,
+      explanation:
+        language === "en"
+          ? "The 'color' property is used to set the color of text in CSS."
+          : "La propriété 'color' est utilisée pour définir la couleur du texte en CSS.",
+    },
+    {
+      id: 6,
+      question:
+        language === "en"
+          ? "What is the CSS Grid 'fr' unit used for?"
+          : "À quoi sert l'unité CSS Grid 'fr' ?",
+      options:
+        language === "en"
+          ? [
+              "To set font size",
+              "To represent a fraction of available space",
+              "To create flexible borders",
+              "To define frame rates",
+            ]
+          : [
+              "Pour définir la taille de la police",
+              "Pour représenter une fraction de l'espace disponible",
+              "Pour créer des bordures flexibles",
+              "Pour définir les fréquences d'images",
+            ],
+      correctAnswer: 1,
+      explanation:
+        language === "en"
+          ? "The 'fr' unit in CSS Grid represents a fraction of the available space in the grid container."
+          : "L'unité 'fr' dans CSS Grid représente une fraction de l'espace disponible dans le conteneur de la grille.",
+    },
   ];
 
   // Handle keyboard shortcuts
@@ -319,7 +426,7 @@ const LearningCenter = () => {
       if (e.key === "Escape" && isFullscreen) {
         toggleFullscreen();
       }
-      
+
       // Prevent screenshots, copy/paste, and drag/drop
       if (!isAdmin) {
         // Prevent Print Screen
@@ -383,10 +490,10 @@ const LearningCenter = () => {
     }
   };
 
-  const handleVideoEnd = () => {
+  const handleVideoEnd = async () => {
     setIsPlaying(false);
     setVideoCompleted(true);
-    saveVideoCompletion(); // Save completion status
+    await saveVideoCompletion(); // Save completion status
     toast({
       title: t("learning.video.completed"),
       description: t("learning.video.completedDesc"),
@@ -402,16 +509,29 @@ const LearningCenter = () => {
       // The quiz section will remain hidden if it was already completed
       setIsPlaying(false);
       setMaxTime(0); // Reset max time tracking
-      
-      // Also remove localStorage entries for video completion only
+
+      // Reset the video completion status in the database
       if (user) {
-        try {
-          const videoCompletionKey = `video_completed_${user.id}`;
-          localStorage.removeItem(videoCompletionKey);
-          console.log("Video completion status cleared for user", user.id);
-        } catch (error) {
-          console.error("Failed to clear video completion status from localStorage:", error);
-        }
+        supabase
+          .from("players")
+          .update({
+            video_completed: false,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", user.id)
+          .then(({ error }) => {
+            if (error) {
+              console.error(
+                "Failed to reset video completion in database:",
+                error
+              );
+            } else {
+              console.log(
+                "Video completion status reset in database for user",
+                user.id
+              );
+            }
+          });
       }
     }
   };
@@ -479,10 +599,31 @@ const LearningCenter = () => {
   };
 
   const handleAnswerSelect = (answerIndex: number) => {
+    // Prevent answer selection if quiz is already completed
+    if (quizCompleted) {
+      toast({
+        title: "Quiz Already Completed",
+        description:
+          "You have already completed this quiz. Each player can only take the quiz once.",
+        variant: "destructive",
+      });
+      return;
+    }
     setSelectedAnswer(answerIndex);
   };
 
   const handleQuizSubmit = () => {
+    // Additional check to ensure quiz cannot be submitted if already completed
+    if (quizCompleted) {
+      toast({
+        title: "Quiz Already Completed",
+        description:
+          "You have already completed this quiz. Each player can only take the quiz once.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (selectedAnswer === null) {
       toast({
         title: t("learning.quiz.select"),
@@ -496,29 +637,33 @@ const LearningCenter = () => {
       selectedAnswer === quizQuestions[currentQuestion].correctAnswer;
     setShowResult(true);
 
-    if (isCorrect) {
-      setQuizScore(quizScore + 1);
-    }
+    // Calculate the new score
+    const newScore = isCorrect ? quizScore + 1 : quizScore;
 
     setTimeout(() => {
       if (currentQuestion < quizQuestions.length - 1) {
         setCurrentQuestion(currentQuestion + 1);
         setSelectedAnswer(null);
         setShowResult(false);
+        // Update the score only after moving to the next question
+        setQuizScore(newScore);
       } else {
+        // For the last question, update the score immediately and mark quiz as completed
+        setQuizScore(newScore);
         setQuizCompleted(true);
         toast({
           title: t("common.success"),
           description: t("learning.quiz.score")
-            .replace("{score}", (quizScore + (isCorrect ? 1 : 0)).toString())
+            .replace("{score}", newScore.toString())
             .replace("{total}", quizQuestions.length.toString()),
           duration: 5000,
         });
-        
+
         // Show a message that the score will be visible to admins
         toast({
           title: "Score Submitted",
-          description: "Your quiz score has been submitted and will be visible to all administrators.",
+          description:
+            "Your quiz score has been submitted and will be visible to all administrators.",
           duration: 3000,
         });
       }
@@ -566,7 +711,7 @@ const LearningCenter = () => {
     }
 
     const newResourceItem: LearningResource = {
-      id: resources.length + 1,
+      id: Date.now().toString(), // Generate a temporary ID
       ...newResource,
       url: resourceUrl,
     };
@@ -610,28 +755,46 @@ const LearningCenter = () => {
   useEffect(() => {
     // Reset the check flag when user changes
     setVideoCompletionChecked(false);
-    
-    const checkVideoCompletion = () => {
+
+    const checkVideoCompletion = async () => {
       if (!user) {
         console.log("No user object available for video completion check");
         return;
       }
-      
+
       console.log("Checking video completion for user ID:", user.id);
-      
+
       // Small delay to ensure user object is fully loaded
-      setTimeout(() => {
+      setTimeout(async () => {
         try {
-          // Check if user has completed this video before in localStorage
-          const completionKey = `video_completed_${user.id}`;
-          const completed = localStorage.getItem(completionKey) === 'true';
-          console.log("Video completion check - key:", completionKey, "value:", localStorage.getItem(completionKey));
-          
-          if (completed) {
+          // Check database for video completion status
+          console.log(
+            "Checking video completion in database for user:",
+            user.id
+          );
+          const { data, error } = await supabase
+            .from("players")
+            .select("video_completed")
+            .eq("id", user.id)
+            .limit(1);
+
+          if (error) {
+            console.error(
+              "Error checking video completion in database:",
+              error
+            );
+            setVideoCompletionChecked(true);
+            return;
+          }
+
+          if (data && data.length > 0 && data[0].video_completed) {
             setVideoCompleted(true);
-            console.log("Video completion status restored for user", user.id);
+            console.log("Video completion found in database for user", user.id);
           } else {
-            console.log("No video completion found for user", user.id);
+            console.log(
+              "No video completion found in database for user",
+              user.id
+            );
           }
         } catch (error) {
           console.error("Failed to check video completion:", error);
@@ -645,16 +808,30 @@ const LearningCenter = () => {
   }, [user]); // Remove videoCompletionChecked from dependencies
 
   // Save video completion status
-  const saveVideoCompletion = () => {
+  const saveVideoCompletion = async () => {
     if (!user) {
       console.log("No user available to save video completion");
       return;
     }
-    
+
     try {
-      const completionKey = `video_completed_${user.id}`;
-      localStorage.setItem(completionKey, 'true');
-      console.log("Video completion saved successfully for user", user.id, "with key:", completionKey);
+      // Save to database for persistence
+      const { error } = await supabase
+        .from("players")
+        .update({
+          video_completed: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+
+      if (error) {
+        console.error("Failed to save video completion to database:", error);
+      } else {
+        console.log(
+          "Video completion status saved to database for user",
+          user.id
+        );
+      }
     } catch (error) {
       console.error("Failed to save video completion:", error);
     }
@@ -675,7 +852,7 @@ const LearningCenter = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {/* Video Tutorial Section */}
             <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30">
               <CardHeader>
@@ -697,11 +874,14 @@ const LearningCenter = () => {
                         console.error("Video error:", e);
                         toast({
                           title: "Video Error",
-                          description: "Failed to load video. Please try again later.",
+                          description:
+                            "Failed to load video. Please try again later.",
                           variant: "destructive",
                         });
                       }}
-                      onLoadedData={() => console.log("Video loaded successfully")}
+                      onLoadedData={() =>
+                        console.log("Video loaded successfully")
+                      }
                       controls={false}
                     >
                       <source src="/Video-Project.mp4" type="video/mp4" />
@@ -915,6 +1095,74 @@ const LearningCenter = () => {
               </CardContent>
             </Card>
 
+            {/* Learning Resources Section - Always show */}
+            <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <BookOpen className="w-5 h-5 mr-2 text-battle-purple" />
+                  {t("learning.resources.title")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingResources ? (
+                  <div className="flex justify-center items-center h-32">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-battle-purple"></div>
+                  </div>
+                ) : resources.length === 0 ? (
+                  <div className="text-center py-8">
+                    <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">
+                      {t("learning.resources.noResources")}
+                    </h3>
+                    <p className="text-muted-foreground">
+                      {t("learning.resources.noResourcesDesc")}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {resources.map((resource) => (
+                      <div
+                        key={resource.id}
+                        className="p-4 bg-background/50 rounded-lg border border-border hover:border-battle-purple/50 transition-colors"
+                      >
+                        <div className="flex items-start">
+                          <div className="mr-3 mt-1">
+                            {getResourceIcon(resource.type)}
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-foreground">
+                              {resource.title}
+                            </h3>
+                            {resource.description && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {resource.description}
+                              </p>
+                            )}
+                            <div className="flex items-center mt-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {resource.type.toUpperCase()}
+                              </Badge>
+                              <Button
+                                variant="link"
+                                size="sm"
+                                className="ml-auto p-0 h-auto text-battle-purple hover:text-battle-pink"
+                                onClick={() =>
+                                  window.open(resource.url, "_blank")
+                                }
+                              >
+                                {t("learning.resources.view")}
+                                <ExternalLink className="w-4 h-4 ml-1" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Quiz Section - Only show if quiz is not completed */}
             {!quizCompleted && (
               <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30">
@@ -956,7 +1204,10 @@ const LearningCenter = () => {
                               "{current}",
                               (currentQuestion + 1).toString()
                             )
-                            .replace("{total}", quizQuestions.length.toString())}
+                            .replace(
+                              "{total}",
+                              quizQuestions.length.toString()
+                            )}
                         </span>
                         <span className="text-sm font-medium">
                           {t("common.continue")}: {quizScore}
@@ -983,7 +1234,8 @@ const LearningCenter = () => {
                                 } ${
                                   showResult
                                     ? index ===
-                                      quizQuestions[currentQuestion].correctAnswer
+                                      quizQuestions[currentQuestion]
+                                        .correctAnswer
                                       ? "border-green-500 bg-green-500/10"
                                       : selectedAnswer === index
                                       ? "border-red-500 bg-red-500/10"
@@ -1002,11 +1254,11 @@ const LearningCenter = () => {
                                         ? index ===
                                           quizQuestions[currentQuestion]
                                             .correctAnswer
-                                        ? "border-green-500 bg-green-500"
-                                        : selectedAnswer === index
-                                        ? "border-red-500 bg-red-500"
+                                          ? "border-green-500 bg-green-500"
+                                          : selectedAnswer === index
+                                          ? "border-red-500 bg-red-500"
+                                          : ""
                                         : ""
-                                      : ""
                                     }`}
                                   >
                                     {showResult &&
@@ -1017,9 +1269,10 @@ const LearningCenter = () => {
                                       ) : selectedAnswer === index ? (
                                         <XCircle className="w-4 h-4 text-white" />
                                       ) : null)}
-                                    {!showResult && selectedAnswer === index && (
-                                      <div className="w-2 h-2 rounded-full bg-white"></div>
-                                    )}
+                                    {!showResult &&
+                                      selectedAnswer === index && (
+                                        <div className="w-2 h-2 rounded-full bg-white"></div>
+                                      )}
                                   </div>
                                   <span>{option}</span>
                                 </div>
@@ -1068,7 +1321,7 @@ const LearningCenter = () => {
                       </div>
 
                       <Button
-                        onClick={handleQuizSubmit}
+                        onClick={() => handleQuizSubmit()}
                         disabled={selectedAnswer === null && !showResult}
                         className="w-full bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
                       >
@@ -1081,8 +1334,8 @@ const LearningCenter = () => {
                 </CardContent>
               </Card>
             )}
-            
-            {/* Show completion message when quiz is completed, but outside of a card to match video behavior */}
+
+            {/* Show completion message below the video when quiz is completed */}
             {quizCompleted && (
               <div className="bg-card/50 backdrop-blur-sm border border-battle-purple/30 rounded-lg p-6">
                 <div className="text-center py-4">
@@ -1102,8 +1355,6 @@ const LearningCenter = () => {
               </div>
             )}
           </div>
-
-
         </div>
       </main>
     </div>
