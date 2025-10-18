@@ -27,11 +27,34 @@ const AdminLogin = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    console.log('AdminLogin - isAdmin:', isAdmin, 'admin:', admin);
     // Redirect if already logged in as admin
     if (isAdmin && admin) {
+      console.log('Already logged in, redirecting to dashboard');
       navigate("/admin/dashboard");
     }
   }, [isAdmin, admin, navigate]);
+
+  // Also check localStorage directly on component mount
+  useEffect(() => {
+    console.log('Checking localStorage for admin data');
+    const hardcodedAdmin = localStorage.getItem("hardcoded_admin");
+    console.log('Found hardcodedAdmin:', hardcodedAdmin);
+    if (hardcodedAdmin) {
+      try {
+        const adminData = JSON.parse(hardcodedAdmin);
+        console.log('Parsed adminData:', adminData);
+        if (adminData && adminData.email) {
+          // Already logged in, redirect to dashboard
+          console.log('Admin data found, redirecting to dashboard');
+          navigate("/admin/dashboard");
+        }
+      } catch (error) {
+        console.error("Error parsing admin data:", error);
+        localStorage.removeItem("hardcoded_admin");
+      }
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,12 +79,19 @@ const AdminLogin = () => {
       };
       localStorage.setItem("hardcoded_admin", JSON.stringify(adminData));
 
+      // Manually dispatch storage event for the same tab
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'hardcoded_admin',
+        newValue: JSON.stringify(adminData),
+        url: window.location.href
+      }));
+
       toast({
         title: "Success",
         description: "Logged in successfully",
       });
 
-      // Small delay to ensure context is updated
+      // Small delay to ensure context is updated before navigation
       setTimeout(() => {
         navigate("/admin/dashboard");
       }, 100);

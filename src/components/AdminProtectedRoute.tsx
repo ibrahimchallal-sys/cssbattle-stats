@@ -6,25 +6,35 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 const AdminProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAdmin, loading } = useAdmin();
   const navigate = useNavigate();
-  const [checking, setChecking] = useState(true);
+
+  console.log('AdminProtectedRoute - isAdmin:', isAdmin, 'loading:', loading);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setChecking(false);
-      if (!loading && !isAdmin) {
+    console.log('AdminProtectedRoute useEffect - isAdmin:', isAdmin, 'loading:', loading);
+    if (!loading && !isAdmin) {
+      // If not loading anymore and not admin, redirect to login
+      console.log('Redirecting to admin login');
+      const timer = setTimeout(() => {
         navigate("/admin");
-      }
-    }, 300);
+      }, 100);
 
-    return () => clearTimeout(timer);
+      return () => clearTimeout(timer);
+    }
   }, [isAdmin, loading, navigate]);
 
-  if (checking || loading) {
+  // Show loading spinner while checking authentication
+  if (loading) {
+    console.log('Showing loading spinner');
     return <LoadingSpinner message="Loading..." />;
   }
 
-  if (!isAdmin) return null;
+  // If not admin, redirect will happen in the effect above
+  if (!isAdmin) {
+    console.log('Not admin, returning null');
+    return null;
+  }
 
+  console.log('Admin access granted, showing children');
   return <>{children}</>;
 };
 

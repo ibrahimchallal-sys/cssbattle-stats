@@ -25,31 +25,34 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('AdminContext useEffect running');
     let mounted = true;
 
     const checkAdminStatus = async () => {
       try {
         const hardcodedAdmin = safeLocalStorage.getItem("hardcoded_admin");
+        console.log('Checking admin status, hardcodedAdmin:', hardcodedAdmin);
 
         if (hardcodedAdmin) {
           const adminData = JSON.parse(hardcodedAdmin);
+          console.log('Found admin data:', adminData);
           if (mounted) {
             setAdmin(adminData as User);
             setIsAdmin(true);
-            setLoading(false);
           }
-          return;
-        }
-
-        // For regular admin checking, we'll rely on the auth listener
-        if (mounted) {
-          setLoading(false);
+        } else {
+          console.log('No hardcoded admin found');
         }
       } catch (error) {
         console.error("Error checking admin status:", error);
         if (mounted) {
           setAdmin(null);
           setIsAdmin(false);
+        }
+      } finally {
+        // Always ensure loading is set to false
+        console.log('Setting loading to false');
+        if (mounted) {
           setLoading(false);
         }
       }
@@ -57,10 +60,41 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
     checkAdminStatus();
 
+    // Listen for storage changes (including localStorage updates)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (!mounted) return;
+      console.log('Storage event triggered:', e.key, e.newValue);
+      if (e.key === "hardcoded_admin") {
+        if (e.newValue) {
+          try {
+            const adminData = JSON.parse(e.newValue);
+            console.log('Setting admin data from storage event:', adminData);
+            if (mounted) {
+              setAdmin(adminData as User);
+              setIsAdmin(true);
+            }
+          } catch (error) {
+            console.error("Error parsing hardcoded admin:", error);
+            safeLocalStorage.removeItem("hardcoded_admin");
+          }
+        } else {
+          // Admin logged out
+          console.log('Admin logged out, clearing state');
+          if (mounted) {
+            setAdmin(null);
+            setIsAdmin(false);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('Supabase auth state change:', _event, session);
       if (!mounted) return;
 
       // Check for hardcoded admin first
@@ -109,12 +143,14 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => {
+      console.log('AdminContext useEffect cleanup');
       mounted = false;
       if (subscription?.unsubscribe) {
         subscription.unsubscribe();
       }
+      window.removeEventListener('storage', handleStorageChange);
     };
-  }, []);
+  }, []); // Empty dependency array is correct here
 
   const logout = async () => {
     safeLocalStorage.removeItem("hardcoded_admin");
