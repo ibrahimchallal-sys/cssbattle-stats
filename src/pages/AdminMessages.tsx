@@ -56,18 +56,17 @@ const AdminMessages = () => {
 
   const fetchMessages = async () => {
     try {
-      if (!admin) return;
-
+      // Fetch all messages sent to any admin
       const { data, error } = await supabase
         .from("contact_messages")
         .select("*")
-        .eq("recipient_email", admin.email)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
       setMessages((data as ContactMessage[]) || []);
     } catch (error) {
+      console.error("Failed to fetch messages:", error);
       toast({
         title: "Error",
         description: "Failed to fetch messages",
