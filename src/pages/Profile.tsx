@@ -27,8 +27,13 @@ const Profile = () => {
   const [success, setSuccess] = useState<string | null>(null);
 
   const handleLogout = async () => {
-    await logout();
-    navigate("/");
+    try {
+      await logout();
+      navigate("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+      setError("Failed to log out. Please try again.");
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
