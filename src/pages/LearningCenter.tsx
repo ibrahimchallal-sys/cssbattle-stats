@@ -94,22 +94,35 @@ useEffect(() => {
 }, [quizCompleted, scoreSaved, user, quizScore]);
 
   // Resource state
-  const [resources, setResources] = useState<LearningResource[]>([
-    {
-      id: 1,
-      title: "CSS Battle Guide",
-      description: "Complete guide to mastering CSS Battle techniques",
-      url: "#",
-      type: "pdf",
-    },
-    {
-      id: 2,
-      title: "Official Documentation",
-      description: "Official CSS Battle platform documentation",
-      url: "https://cssbattle.dev/docs",
-      type: "link",
-    },
-  ]);
+  const [resources, setResources] = useState<LearningResource[]>([]);
+  const [loadingResources, setLoadingResources] = useState(true);
+
+  // Fetch resources from database
+  useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("learning_resources")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        setResources((data || []).map(r => ({
+          id: parseInt(r.id),
+          title: r.title,
+          description: r.description || "",
+          url: r.url,
+          type: r.type as "pdf" | "doc" | "link" | "video"
+        })));
+      } catch (error) {
+        console.error("Failed to fetch resources:", error);
+      } finally {
+        setLoadingResources(false);
+      }
+    };
+
+    fetchResources();
+  }, []);
 
   // New resource form
   const [newResource, setNewResource] = useState({

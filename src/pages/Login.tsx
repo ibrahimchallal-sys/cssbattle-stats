@@ -207,7 +207,7 @@ const Login = () => {
               <Button
                 type="button"
                 variant="link"
-                onClick={() => navigate("/admin/dashboard")}
+                onClick={() => navigate("/password-reset")}
                 className="px-0 text-battle-purple hover:text-battle-pink"
               >
                 {language === "en" ? "Forgot Password?" : "Mot de passe oublié ?"}

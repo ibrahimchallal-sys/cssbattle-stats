@@ -86,7 +86,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
             .select("role")
             .eq("user_id", session.user.id)
             .eq("role", "admin")
-            .single();
+            .maybeSingle();
 
           if (!error && roleData && mounted) {
             setAdmin(session.user);

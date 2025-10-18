@@ -20,18 +20,21 @@ export type Database = {
           email: string
           id: string
           name: string
+          password_hash: string | null
         }
         Insert: {
           created_at?: string | null
           email: string
           id?: string
           name: string
+          password_hash?: string | null
         }
         Update: {
           created_at?: string | null
           email?: string
           id?: string
           name?: string
+          password_hash?: string | null
         }
         Relationships: []
       }
@@ -218,6 +221,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_admin_contacts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          email: string
+          name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

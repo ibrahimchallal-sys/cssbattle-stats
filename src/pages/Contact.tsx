@@ -53,10 +53,7 @@ export default function Contact() {
 
   const fetchAdmins = async () => {
     try {
-      const { data, error } = await supabase
-        .from("admins")
-        .select("name, email")
-        .order("name");
+      const { data, error } = await supabase.rpc('get_admin_contacts');
       
       if (error) throw error;
       setAdmins(data || []);
@@ -239,22 +236,11 @@ export default function Contact() {
                     <SelectValue placeholder="Choose a team member" />
                   </SelectTrigger>
                   <SelectContent>
-                    <optgroup label="Team Members">
-                      {teamMembers
-                        .filter((m) => m.email !== "X")
-                        .map((member, index) => (
-                          <SelectItem key={`team-${index}`} value={member.email}>
-                            {member.name}
-                          </SelectItem>
-                        ))}
-                    </optgroup>
-                    <optgroup label="Admins">
-                      {admins.map((admin, index) => (
-                        <SelectItem key={`admin-${index}`} value={admin.email}>
-                          {admin.name}
-                        </SelectItem>
-                      ))}
-                    </optgroup>
+                    {admins.map((admin, index) => (
+                      <SelectItem key={`admin-${index}`} value={admin.email}>
+                        {admin.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
