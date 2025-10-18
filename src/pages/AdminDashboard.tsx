@@ -37,6 +37,7 @@ import {
   Upload,
   ChevronDown,
   SlidersHorizontal,
+  MessageSquare,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { GROUP_OPTIONS } from "@/constants/groups";
@@ -996,7 +997,24 @@ const AdminDashboard = () => {
               </p>
             )}
           </div>
-          <div className="flex gap-2">{/*  */}</div>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => navigate("/admin/messages")}
+              variant="outline"
+              className="border-primary/50 hover:bg-primary/10"
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Messages
+            </Button>
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="border-red-500/50 hover:bg-red-500/10"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         {/* Search and Messages */}
