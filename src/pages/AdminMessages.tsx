@@ -52,24 +52,48 @@ const AdminMessages = () => {
       return;
     }
     fetchMessages();
-  }, [isAdmin, adminLoading, navigate]);
+  }, [isAdmin, adminLoading, navigate, admin]);
 
   const fetchMessages = async () => {
     try {
-      // Fetch all messages sent to any admin
+      // Ensure admin is available
+      if (!admin?.email) {
+        console.warn("Admin email not available");
+        setMessages([]);
+        setLoading(false);
+        return;
+      }
+      
+      console.log("Fetching messages for admin:", admin.email);
+      
+      // Fetch messages sent to the current admin
       const { data, error } = await supabase
         .from("contact_messages")
         .select("*")
+        .eq("recipient_email", admin.email)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
       setMessages((data as ContactMessage[]) || []);
+      console.log(`Fetched ${data?.length || 0} messages for ${admin.email}`);
+      
+      // Also log all messages for debugging
+      const { data: allData, error: allError } = await supabase
+        .from("contact_messages")
+        .select("*")
+        .order("created_at", { ascending: false });
+        
+      if (!allError) {
+        console.log("All messages in database:", allData?.length || 0);
+        console.log("Messages with recipient_email matching admin:", 
+          allData?.filter(msg => msg.recipient_email === admin.email).length || 0);
+      }
     } catch (error) {
       console.error("Failed to fetch messages:", error);
       toast({
         title: "Error",
-        description: "Failed to fetch messages",
+        description: "Failed to fetch messages: " + (error as Error).message,
         variant: "destructive",
       });
     } finally {
