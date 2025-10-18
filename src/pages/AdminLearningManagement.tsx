@@ -22,6 +22,7 @@ import {
   Trophy,
   BookOpen,
   PlusCircle,
+  RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/contexts/AdminContext";
@@ -74,6 +75,13 @@ const AdminLearningManagement = () => {
       return;
     }
     fetchData();
+    
+    // Set up periodic refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchQuizScores();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, [isAdmin, adminLoading, navigate]);
 
   const fetchData = async () => {
@@ -273,7 +281,14 @@ const AdminLearningManagement = () => {
           <h1 className="text-3xl font-bold text-foreground">
             Learning Management
           </h1>
-          <div></div>
+          <Button
+            onClick={fetchData}
+            variant="outline"
+            className="border-primary/50"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -300,12 +315,12 @@ const AdminLearningManagement = () => {
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="font-semibold text-foreground">
-                            {score.players.full_name}
+                            {score.players?.full_name || "Unknown Player"}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {score.players.email}
+                            {score.players?.email || "No email"}
                           </p>
-                          {score.players.group_name && (
+                          {score.players?.group_name && (
                             <Badge variant="secondary" className="mt-1">
                               {score.players.group_name}
                             </Badge>

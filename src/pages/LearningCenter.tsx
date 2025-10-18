@@ -59,6 +59,7 @@ const LearningCenter = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoCompleted, setVideoCompleted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [videoCompletionChecked, setVideoCompletionChecked] = useState(false);
 
   // Store the maximum time the player has reached
   const [maxTime, setMaxTime] = useState(0);
@@ -68,30 +69,129 @@ const LearningCenter = () => {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [quizScore, setQuizScore] = useState(0);
-const [quizCompleted, setQuizCompleted] = useState(false);
-const [scoreSaved, setScoreSaved] = useState(false);
+  const [quizCompleted, setQuizCompleted] = useState(false);
+  const [scoreSaved, setScoreSaved] = useState(false);
+  const [quizCompletionChecked, setQuizCompletionChecked] = useState(false);
 
-// Save quiz score when completed
-useEffect(() => {
-  const saveScore = async () => {
-    if (!user) return;
-    try {
-      await supabase.from("quiz_scores").insert({
-        player_id: user.id,
-        score: quizScore,
-        total_questions: quizQuestions.length,
-        quiz_title: "Learning Center Quiz",
-      });
-      setScoreSaved(true);
-    } catch (e) {
-      console.error("Failed to save quiz score", e);
+  // Check if user has already completed the quiz
+  useEffect(() => {
+    // Reset the check flag when user changes
+    setQuizCompletionChecked(false);
+    
+    const checkQuizCompletion = async () => {
+      if (!user) return;
+      
+      // Small delay to ensure user object is fully loaded
+      setTimeout(async () => {
+        try {
+          // First check localStorage for immediate UI update
+          const completionKey = `quiz_completed_${user.id}`;
+          const localStorageCompleted = localStorage.getItem(completionKey) === 'true';
+          
+          if (localStorageCompleted) {
+            setQuizCompleted(true);
+            // Also restore the quiz score if available
+            const scoreKey = `quiz_score_${user.id}`;
+            const savedScore = localStorage.getItem(scoreKey);
+            console.log("Restoring quiz score from localStorage:", savedScore);
+            if (savedScore) {
+              setQuizScore(parseInt(savedScore, 10));
+            }
+            setQuizCompletionChecked(true);
+            return;
+          }
+          
+          // If not in localStorage, check database
+          console.log("Checking quiz completion in database for user:", user.id);
+          const { data, error } = await supabase
+            .from("quiz_scores")
+            .select("score")
+            .eq("player_id", user.id)
+            .limit(1);
+            
+          if (error) {
+            console.error("Error checking quiz completion in database:", error);
+            setQuizCompletionChecked(true);
+            return;
+          }
+          
+          if (data && data.length > 0) {
+            console.log("Quiz completion found in database:", data[0]);
+            setQuizCompleted(true);
+            setQuizScore(data[0].score);
+            setScoreSaved(true);
+            
+            // Also save to localStorage for faster loading next time
+            localStorage.setItem(completionKey, 'true');
+            const scoreKey = `quiz_score_${user.id}`;
+            localStorage.setItem(scoreKey, data[0].score.toString());
+          }
+        } catch (error) {
+          console.error("Failed to check quiz completion:", error);
+        } finally {
+          setQuizCompletionChecked(true);
+        }
+      }, 100);
+    };
+
+    checkQuizCompletion();
+  }, [user]); // Remove quizCompletionChecked from dependencies
+
+  // Save quiz score when completed
+  useEffect(() => {
+    const saveScore = async () => {
+      if (!user) return;
+      try {
+        console.log("Saving quiz score to database for user:", user.id, "score:", quizScore);
+        const { data, error } = await supabase.from("quiz_scores").insert({
+          player_id: user.id,
+          score: quizScore,
+          total_questions: quizQuestions.length,
+          quiz_title: "Learning Center Quiz",
+          completed_at: new Date().toISOString()
+        });
+        
+        if (error) {
+          console.error("Error saving quiz score to database:", error);
+          toast({
+            title: "Error",
+            description: "Failed to save quiz score. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        console.log("Quiz score saved to database successfully:", data);
+        setScoreSaved(true);
+        setQuizCompleted(true); // Ensure quiz is marked as completed
+        
+        // Also save completion status in localStorage
+        const completionKey = `quiz_completed_${user.id}`;
+        localStorage.setItem(completionKey, 'true');
+        const scoreKey = `quiz_score_${user.id}`;
+        localStorage.setItem(scoreKey, quizScore.toString());
+        console.log("Quiz completion status saved to localStorage");
+        
+        // Show success message to user
+        toast({
+          title: "Success",
+          description: "Quiz completed successfully! Your score has been saved and the quiz is now permanently completed.",
+        });
+      } catch (e) {
+        console.error("Failed to save quiz score", e);
+        toast({
+          title: "Error",
+          description: "Failed to save quiz score. Please try again.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    if (quizCompleted && !scoreSaved) {
+      console.log("Quiz completed, saving score...");
+      saveScore();
     }
-  };
-
-  if (quizCompleted && !scoreSaved) {
-    saveScore();
-  }
-}, [quizCompleted, scoreSaved, user, quizScore]);
+  }, [quizCompleted, scoreSaved, user, quizScore]);
 
   // Resource state
   const [resources, setResources] = useState<LearningResource[]>([]);
@@ -357,6 +457,7 @@ useEffect(() => {
   const handleVideoEnd = () => {
     setIsPlaying(false);
     setVideoCompleted(true);
+    saveVideoCompletion(); // Save completion status
     toast({
       title: t("learning.video.completed"),
       description: t("learning.video.completedDesc"),
@@ -368,14 +469,21 @@ useEffect(() => {
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
       setVideoCompleted(false);
-      setQuizCompleted(false); // Reset quiz when video is reset
-      setScoreSaved(false);
-      setCurrentQuestion(0);
-      setSelectedAnswer(null);
-      setShowResult(false);
-      setQuizScore(0);
+      // Note: We don't reset the quiz when video is reset since quiz completion is now permanent
+      // The quiz section will remain hidden if it was already completed
       setIsPlaying(false);
       setMaxTime(0); // Reset max time tracking
+      
+      // Also remove localStorage entries for video completion only
+      if (user) {
+        try {
+          const videoCompletionKey = `video_completed_${user.id}`;
+          localStorage.removeItem(videoCompletionKey);
+          console.log("Video completion status cleared for user", user.id);
+        } catch (error) {
+          console.error("Failed to clear video completion status from localStorage:", error);
+        }
+      }
     }
   };
 
@@ -477,17 +585,15 @@ useEffect(() => {
             .replace("{total}", quizQuestions.length.toString()),
           duration: 5000,
         });
+        
+        // Show a message that the score will be visible to admins
+        toast({
+          title: "Score Submitted",
+          description: "Your quiz score has been submitted and will be visible to all administrators.",
+          duration: 3000,
+        });
       }
     }, 2000);
-  };
-
-  const resetQuiz = () => {
-    setCurrentQuestion(0);
-    setSelectedAnswer(null);
-    setShowResult(false);
-    setQuizScore(0);
-    setQuizCompleted(false);
-    setScoreSaved(false);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -571,6 +677,60 @@ useEffect(() => {
     }
   };
 
+  // Check if user has already completed the video
+  useEffect(() => {
+    // Reset the check flag when user changes
+    setVideoCompletionChecked(false);
+    
+    const checkVideoCompletion = () => {
+      if (!user) {
+        console.log("No user object available for video completion check");
+        return;
+      }
+      
+      console.log("Checking video completion for user ID:", user.id);
+      
+      // Small delay to ensure user object is fully loaded
+      setTimeout(() => {
+        try {
+          // Check if user has completed this video before in localStorage
+          const completionKey = `video_completed_${user.id}`;
+          const completed = localStorage.getItem(completionKey) === 'true';
+          console.log("Video completion check - key:", completionKey, "value:", localStorage.getItem(completionKey));
+          
+          if (completed) {
+            setVideoCompleted(true);
+            console.log("Video completion status restored for user", user.id);
+          } else {
+            console.log("No video completion found for user", user.id);
+          }
+        } catch (error) {
+          console.error("Failed to check video completion:", error);
+        } finally {
+          setVideoCompletionChecked(true);
+        }
+      }, 100);
+    };
+
+    checkVideoCompletion();
+  }, [user]); // Remove videoCompletionChecked from dependencies
+
+  // Save video completion status
+  const saveVideoCompletion = () => {
+    if (!user) {
+      console.log("No user available to save video completion");
+      return;
+    }
+    
+    try {
+      const completionKey = `video_completed_${user.id}`;
+      localStorage.setItem(completionKey, 'true');
+      console.log("Video completion saved successfully for user", user.id, "with key:", completionKey);
+    } catch (error) {
+      console.error("Failed to save video completion:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <Navbar />
@@ -604,9 +764,18 @@ useEffect(() => {
                       onEnded={handleVideoEnd}
                       onSeeking={handleVideoSeek}
                       onTimeUpdate={handleVideoTimeUpdate}
+                      onError={(e) => {
+                        console.error("Video error:", e);
+                        toast({
+                          title: "Video Error",
+                          description: "Failed to load video. Please try again later.",
+                          variant: "destructive",
+                        });
+                      }}
+                      onLoadedData={() => console.log("Video loaded successfully")}
                       controls={false}
                     >
-                      <source src="/tutorial-video.mp4" type="video/mp4" />
+                      <source src="/Video-Project.mp4" type="video/mp4" />
                       {language === "en"
                         ? "Your browser does not support the video tag."
                         : "Votre navigateur ne prend pas en charge la balise vidéo."}
@@ -806,188 +975,192 @@ useEffect(() => {
               </CardContent>
             </Card>
 
-            {/* Quiz Section */}
-            <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Trophy className="w-5 h-5 mr-2 text-battle-purple" />
-                  {t("learning.quiz.title")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!videoCompleted ? (
-                  <div className="text-center py-8">
-                    <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-                    <h3 className="text-2xl font-bold mb-2">
-                      {t("learning.quiz.videoRequired")}
-                    </h3>
-                    <p className="text-muted-foreground mb-6">
-                      {t("learning.quiz.videoRequiredDesc")}
-                    </p>
-                    <Button
-                      onClick={() => {
-                        if (videoRef.current) {
-                          videoRef.current.scrollIntoView({
-                            behavior: "smooth",
-                          });
-                        }
-                      }}
-                      className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
-                    >
-                      {t("learning.quiz.watchVideo")}
-                    </Button>
-                  </div>
-                ) : quizCompleted ? (
-                  <div className="text-center py-8">
-                    <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-                    <h3 className="text-2xl font-bold mb-2">
-                      {t("learning.quiz.completed")}
-                    </h3>
-                    <p className="text-muted-foreground mb-6">
-                      {t("learning.quiz.score")
-                        .replace("{score}", quizScore.toString())
-                        .replace("{total}", quizQuestions.length.toString())}
-                    </p>
-                    <Button
-                      onClick={resetQuiz}
-                      className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
-                    >
-                      {t("learning.quiz.retake")}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">
-                        {t("learning.quiz.question")
-                          .replace(
-                            "{current}",
-                            (currentQuestion + 1).toString()
-                          )
-                          .replace("{total}", quizQuestions.length.toString())}
-                      </span>
-                      <span className="text-sm font-medium">
-                        {t("common.continue")}: {quizScore}
-                      </span>
-                    </div>
-
-                    <div>
-                      <h3 className="text-xl font-semibold mb-4">
-                        {quizQuestions[currentQuestion].question}
+            {/* Quiz Section - Only show if quiz is not completed */}
+            {!quizCompleted && (
+              <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Trophy className="w-5 h-5 mr-2 text-battle-purple" />
+                    {t("learning.quiz.title")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {!videoCompleted ? (
+                    <div className="text-center py-8">
+                      <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+                      <h3 className="text-2xl font-bold mb-2">
+                        {t("learning.quiz.videoRequired")}
                       </h3>
+                      <p className="text-muted-foreground mb-6">
+                        {t("learning.quiz.videoRequiredDesc")}
+                      </p>
+                      <Button
+                        onClick={() => {
+                          if (videoRef.current) {
+                            videoRef.current.scrollIntoView({
+                              behavior: "smooth",
+                            });
+                          }
+                        }}
+                        className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
+                      >
+                        {t("learning.quiz.watchVideo")}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">
+                          {t("learning.quiz.question")
+                            .replace(
+                              "{current}",
+                              (currentQuestion + 1).toString()
+                            )
+                            .replace("{total}", quizQuestions.length.toString())}
+                        </span>
+                        <span className="text-sm font-medium">
+                          {t("common.continue")}: {quizScore}
+                        </span>
+                      </div>
 
-                      <div className="space-y-3">
-                        {quizQuestions[currentQuestion].options.map(
-                          (option, index) => (
-                            <div
-                              key={index}
-                              onClick={() =>
-                                !showResult && handleAnswerSelect(index)
-                              }
-                              className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                                selectedAnswer === index
-                                  ? "border-primary bg-primary/10"
-                                  : "border-border hover:border-primary/50"
-                              } ${
-                                showResult
-                                  ? index ===
-                                    quizQuestions[currentQuestion].correctAnswer
-                                    ? "border-green-500 bg-green-500/10"
-                                    : selectedAnswer === index
-                                    ? "border-red-500 bg-red-500/10"
+                      <div>
+                        <h3 className="text-xl font-semibold mb-4">
+                          {quizQuestions[currentQuestion].question}
+                        </h3>
+
+                        <div className="space-y-3">
+                          {quizQuestions[currentQuestion].options.map(
+                            (option, index) => (
+                              <div
+                                key={index}
+                                onClick={() =>
+                                  !showResult && handleAnswerSelect(index)
+                                }
+                                className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                                  selectedAnswer === index
+                                    ? "border-primary bg-primary/10"
+                                    : "border-border hover:border-primary/50"
+                                } ${
+                                  showResult
+                                    ? index ===
+                                      quizQuestions[currentQuestion].correctAnswer
+                                      ? "border-green-500 bg-green-500/10"
+                                      : selectedAnswer === index
+                                      ? "border-red-500 bg-red-500/10"
+                                      : ""
                                     : ""
-                                  : ""
-                              }`}
-                            >
-                              <div className="flex items-center">
-                                <div
-                                  className={`w-6 h-6 rounded-full border mr-3 flex items-center justify-center ${
-                                    selectedAnswer === index
-                                      ? "border-primary bg-primary"
-                                      : "border-border"
-                                  } ${
-                                    showResult
-                                      ? index ===
-                                        quizQuestions[currentQuestion]
-                                          .correctAnswer
+                                }`}
+                              >
+                                <div className="flex items-center">
+                                  <div
+                                    className={`w-6 h-6 rounded-full border mr-3 flex items-center justify-center ${
+                                      selectedAnswer === index
+                                        ? "border-primary bg-primary"
+                                        : "border-border"
+                                    } ${
+                                      showResult
+                                        ? index ===
+                                          quizQuestions[currentQuestion]
+                                            .correctAnswer
                                         ? "border-green-500 bg-green-500"
                                         : selectedAnswer === index
                                         ? "border-red-500 bg-red-500"
                                         : ""
                                       : ""
+                                    }`}
+                                  >
+                                    {showResult &&
+                                      (index ===
+                                      quizQuestions[currentQuestion]
+                                        .correctAnswer ? (
+                                        <CheckCircle className="w-4 h-4 text-white" />
+                                      ) : selectedAnswer === index ? (
+                                        <XCircle className="w-4 h-4 text-white" />
+                                      ) : null)}
+                                    {!showResult && selectedAnswer === index && (
+                                      <div className="w-2 h-2 rounded-full bg-white"></div>
+                                    )}
+                                  </div>
+                                  <span>{option}</span>
+                                </div>
+                              </div>
+                            )
+                          )}
+                        </div>
+
+                        {showResult && (
+                          <div
+                            className={`mt-4 p-4 rounded-lg ${
+                              selectedAnswer ===
+                              quizQuestions[currentQuestion].correctAnswer
+                                ? "bg-green-500/10 border border-green-500/30"
+                                : "bg-red-500/10 border border-red-500/30"
+                            }`}
+                          >
+                            <div className="flex items-start">
+                              {selectedAnswer ===
+                              quizQuestions[currentQuestion].correctAnswer ? (
+                                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                              ) : (
+                                <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
+                              )}
+                              <div>
+                                <p
+                                  className={`font-medium ${
+                                    selectedAnswer ===
+                                    quizQuestions[currentQuestion].correctAnswer
+                                      ? "text-green-500"
+                                      : "text-red-500"
                                   }`}
                                 >
-                                  {showResult &&
-                                    (index ===
-                                    quizQuestions[currentQuestion]
-                                      .correctAnswer ? (
-                                      <CheckCircle className="w-4 h-4 text-white" />
-                                    ) : selectedAnswer === index ? (
-                                      <XCircle className="w-4 h-4 text-white" />
-                                    ) : null)}
-                                  {!showResult && selectedAnswer === index && (
-                                    <div className="w-2 h-2 rounded-full bg-white"></div>
-                                  )}
-                                </div>
-                                <span>{option}</span>
+                                  {selectedAnswer ===
+                                  quizQuestions[currentQuestion].correctAnswer
+                                    ? t("learning.quiz.correct")
+                                    : t("learning.quiz.incorrect")}
+                                </p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {quizQuestions[currentQuestion].explanation}
+                                </p>
                               </div>
                             </div>
-                          )
+                          </div>
                         )}
                       </div>
 
-                      {showResult && (
-                        <div
-                          className={`mt-4 p-4 rounded-lg ${
-                            selectedAnswer ===
-                            quizQuestions[currentQuestion].correctAnswer
-                              ? "bg-green-500/10 border border-green-500/30"
-                              : "bg-red-500/10 border border-red-500/30"
-                          }`}
-                        >
-                          <div className="flex items-start">
-                            {selectedAnswer ===
-                            quizQuestions[currentQuestion].correctAnswer ? (
-                              <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                            ) : (
-                              <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
-                            )}
-                            <div>
-                              <p
-                                className={`font-medium ${
-                                  selectedAnswer ===
-                                  quizQuestions[currentQuestion].correctAnswer
-                                    ? "text-green-500"
-                                    : "text-red-500"
-                                }`}
-                              >
-                                {selectedAnswer ===
-                                quizQuestions[currentQuestion].correctAnswer
-                                  ? t("learning.quiz.correct")
-                                  : t("learning.quiz.incorrect")}
-                              </p>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {quizQuestions[currentQuestion].explanation}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                      <Button
+                        onClick={handleQuizSubmit}
+                        disabled={selectedAnswer === null && !showResult}
+                        className="w-full bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
+                      >
+                        {showResult
+                          ? t("learning.quiz.next")
+                          : t("learning.quiz.submit")}
+                      </Button>
                     </div>
-
-                    <Button
-                      onClick={handleQuizSubmit}
-                      disabled={selectedAnswer === null && !showResult}
-                      className="w-full bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
-                    >
-                      {showResult
-                        ? t("learning.quiz.next")
-                        : t("learning.quiz.submit")}
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Show completion message when quiz is completed, but outside of a card to match video behavior */}
+            {quizCompleted && (
+              <div className="bg-card/50 backdrop-blur-sm border border-battle-purple/30 rounded-lg p-6">
+                <div className="text-center py-4">
+                  <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+                  <h3 className="text-2xl font-bold mb-2">
+                    {t("learning.quiz.completed")}
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    {t("learning.quiz.score")
+                      .replace("{score}", quizScore.toString())
+                      .replace("{total}", quizQuestions.length.toString())}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {t("learning.quiz.completedMessage")}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
 
