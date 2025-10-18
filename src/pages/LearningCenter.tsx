@@ -39,7 +39,7 @@ interface QuizQuestion {
 }
 
 interface LearningResource {
-  id: number;
+  id: string;
   title: string;
   description: string;
   url: string;
@@ -108,7 +108,7 @@ useEffect(() => {
 
         if (error) throw error;
         setResources((data || []).map(r => ({
-          id: parseInt(r.id),
+          id: r.id,
           title: r.title,
           description: r.description || "",
           url: r.url,
@@ -531,7 +531,7 @@ useEffect(() => {
     }
 
     const newResourceItem: LearningResource = {
-      id: resources.length + 1,
+      id: `temp_${Date.now()}`,
       ...newResource,
       url: resourceUrl,
     };

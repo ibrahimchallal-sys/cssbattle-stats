@@ -15,8 +15,6 @@ import AdminPlayerDetails from "./pages/AdminPlayerDetails";
 import AdminLearningManagement from "./pages/AdminLearningManagement";
 import Leaderboard from "./pages/Leaderboard";
 import LearningCenter from "./pages/LearningCenter";
-import DatabaseTest from "./pages/DatabaseTest";
-import DatabasePermissionsTest from "./pages/DatabasePermissionsTest";
 import PasswordReset from "./pages/PasswordReset";
 import Contact from "./pages/Contact";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
@@ -56,7 +54,7 @@ const App = () => (
                 </>
               }
             />
-            <Route path="/reset-password" element={<PasswordReset />} />
+            <Route path="/password-reset" element={<PasswordReset />} />
 
             {/* Player-only routes */}
             <Route
@@ -146,26 +144,6 @@ const App = () => (
                     <AdminLearningManagement />
                   </>
                 </AdminProtectedRoute>
-              }
-            />
-
-            {/* Test routes - should probably be removed in production */}
-            <Route
-              path="/database-test"
-              element={
-                <>
-                  <Navbar />
-                  <DatabaseTest />
-                </>
-              }
-            />
-            <Route
-              path="/database-permissions-test"
-              element={
-                <>
-                  <Navbar />
-                  <DatabasePermissionsTest />
-                </>
               }
             />
           </Routes>

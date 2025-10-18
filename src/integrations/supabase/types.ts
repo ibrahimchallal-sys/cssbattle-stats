@@ -221,6 +221,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      backfill_admin_roles_from_admins: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       get_admin_contacts: {
         Args: Record<PropertyKey, never>
         Returns: {

@@ -14,13 +14,6 @@ const AdminLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAdmin, admin } = useAdmin();
-  const adminEmails = [
-    "ibrahimchallal@admincss.com",
-    "younesshlibi@admincss.com",
-    "hamdiboumlik@admincss.com",
-    "mazgouraabdalmonim@gmail.com",
-  ];
-  const adminPassword = "passwordPro";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,33 +31,39 @@ const AdminLogin = () => {
     setIsSubmitting(true);
 
     try {
-      // Check hardcoded admin credentials
-      if (!adminEmails.includes(email)) {
-        throw new Error("Invalid admin email");
-      }
-
-      if (password !== adminPassword) {
-        throw new Error("Invalid password");
-      }
-
-      // Store admin session in localStorage
-      const adminData = {
-        id: email,
+      // Use real Supabase authentication
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
-        email_confirmed_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-      };
-      localStorage.setItem("hardcoded_admin", JSON.stringify(adminData));
+        password: password,
+      });
+
+      if (error) throw error;
+
+      if (!data.user) {
+        throw new Error("Login failed");
+      }
+
+      // Verify the user has admin role
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (roleError) throw roleError;
+
+      if (!roleData) {
+        await supabase.auth.signOut();
+        throw new Error("You do not have admin privileges");
+      }
 
       toast({
         title: "Success",
         description: "Logged in successfully",
       });
 
-      // Small delay to ensure context is updated
-      setTimeout(() => {
-        navigate("/admin/dashboard");
-      }, 100);
+      navigate("/admin/dashboard");
     } catch (err) {
       const error = err as Error;
       toast({
@@ -117,21 +116,16 @@ const AdminLogin = () => {
               </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <select
+                <Input
                   id="email"
+                  name="email"
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-battle-purple/30 bg-background/50 px-3 py-2 pl-10 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  placeholder="Enter admin email"
+                  className="pl-10 bg-background/50 border-battle-purple/30"
                   required
-                  aria-label="Select admin email"
-                >
-                  <option value="">Select admin email...</option>
-                  {adminEmails.map((adminEmail) => (
-                    <option key={adminEmail} value={adminEmail}>
-                      {adminEmail}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             </div>
 
