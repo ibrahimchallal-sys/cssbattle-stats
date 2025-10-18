@@ -94,7 +94,7 @@ const Profile = () => {
         .from('players')
         .update({
           full_name: formData.fullName,
-          css_link: formData.cssBattleProfileLink || null,
+          cssbattle_profile_link: formData.cssBattleProfileLink || null,
           phone: formData.phoneNumber || null,
           group_name: formData.group || null
         })
