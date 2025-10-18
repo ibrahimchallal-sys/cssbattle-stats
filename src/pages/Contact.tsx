@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -44,6 +44,31 @@ export default function Contact() {
     message: "",
   });
   const [loading, setLoading] = useState(false);
+
+  const [admins, setAdmins] = useState<Array<{ name: string; email: string }>>([]);
+
+  useEffect(() => {
+    fetchAdmins();
+  }, []);
+
+  const fetchAdmins = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("admins")
+        .select("name, email")
+        .order("name");
+      
+      if (error) throw error;
+      setAdmins(data || []);
+    } catch (error) {
+      console.error("Failed to fetch admins:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load admin contacts",
+        variant: "destructive",
+      });
+    }
+  };
 
   const teamMembers = [
     {
@@ -214,13 +239,22 @@ export default function Contact() {
                     <SelectValue placeholder="Choose a team member" />
                   </SelectTrigger>
                   <SelectContent>
-                    {teamMembers
-                      .filter((m) => m.email !== "X")
-                      .map((member, index) => (
-                        <SelectItem key={index} value={member.email}>
-                          {member.name}
+                    <optgroup label="Team Members">
+                      {teamMembers
+                        .filter((m) => m.email !== "X")
+                        .map((member, index) => (
+                          <SelectItem key={`team-${index}`} value={member.email}>
+                            {member.name}
+                          </SelectItem>
+                        ))}
+                    </optgroup>
+                    <optgroup label="Admins">
+                      {admins.map((admin, index) => (
+                        <SelectItem key={`admin-${index}`} value={admin.email}>
+                          {admin.name}
                         </SelectItem>
                       ))}
+                    </optgroup>
                   </SelectContent>
                 </Select>
               </div>

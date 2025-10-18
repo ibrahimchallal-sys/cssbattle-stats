@@ -204,6 +204,14 @@ const Login = () => {
                   ? "Don't have an account? Register"
                   : "Pas de compte ? Inscrivez-vous"}
               </Button>
+              <Button
+                type="button"
+                variant="link"
+                onClick={() => navigate("/admin/dashboard")}
+                className="px-0 text-battle-purple hover:text-battle-pink"
+              >
+                {language === "en" ? "Forgot Password?" : "Mot de passe oublié ?"}
+              </Button>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
