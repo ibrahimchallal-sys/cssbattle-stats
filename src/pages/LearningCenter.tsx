@@ -312,16 +312,16 @@ const LearningCenter = () => {
     },
   ];
 
-  // Prevent screenshots, copy/paste, and drag/drop
+  // Handle keyboard shortcuts
   useEffect(() => {
-    const preventActions = (e: Event) => {
-      e.preventDefault();
-      return false;
-    };
-
-    // Only apply restrictions for non-admin users
-    if (!isAdmin) {
-      const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Exit fullscreen with Escape key
+      if (e.key === "Escape" && isFullscreen) {
+        toggleFullscreen();
+      }
+      
+      // Prevent screenshots, copy/paste, and drag/drop
+      if (!isAdmin) {
         // Prevent Print Screen
         if (e.key === "PrintScreen") {
           navigator.clipboard.writeText("");
@@ -363,85 +363,14 @@ const LearningCenter = () => {
           e.preventDefault();
           return false;
         }
-      };
-
-      // Prevent right-click
-      const handleContextMenu = (e: Event) => {
-        e.preventDefault();
-        toast({
-          title: t("learning.video.screenshotRestricted"),
-          description: t("learning.video.screenshotRestrictedDesc"),
-          variant: "destructive",
-        });
-        return false;
-      };
-
-      // Prevent drag and drop
-      const handleDragStart = (e: Event) => {
-        e.preventDefault();
-        toast({
-          title: t("learning.video.screenshotRestricted"),
-          description: t("learning.video.copyRestrictedDesc"),
-          variant: "destructive",
-        });
-        return false;
-      };
-
-      // Prevent drop
-      const handleDrop = (e: Event) => {
-        e.preventDefault();
-        toast({
-          title: t("learning.video.screenshotRestricted"),
-          description: t("learning.video.copyRestrictedDesc"),
-          variant: "destructive",
-        });
-        return false;
-      };
-
-      // Prevent selection
-      const handleSelectStart = (e: Event) => {
-        e.preventDefault();
-        return false;
-      };
-
-      document.addEventListener("keydown", handleKeyDown);
-      document.addEventListener("contextmenu", handleContextMenu);
-      document.addEventListener("dragstart", handleDragStart);
-      document.addEventListener("drop", handleDrop);
-      document.addEventListener("selectstart", handleSelectStart);
-
-      // Prevent video download
-      const preventVideoDownload = () => {
-        const videos = document.querySelectorAll("video");
-        videos.forEach((video) => {
-          video.addEventListener("contextmenu", (e) => {
-            e.preventDefault();
-            toast({
-              title: t("learning.video.screenshotRestricted"),
-              description: t("learning.video.screenshotRestrictedDesc"),
-              variant: "destructive",
-            });
-          });
-
-          // Remove download attribute if present
-          video.removeAttribute("controlsList");
-          video.setAttribute("controlsList", "nodownload");
-        });
-      };
-
-      // Run immediately and after a short delay to catch dynamically loaded videos
-      preventVideoDownload();
-      setTimeout(preventVideoDownload, 1000);
-    }
-
-    return () => {
-      document.removeEventListener("keydown", () => {});
-      document.removeEventListener("contextmenu", () => {});
-      document.removeEventListener("dragstart", () => {});
-      document.removeEventListener("drop", () => {});
-      document.removeEventListener("selectstart", () => {});
+      }
     };
-  }, [isAdmin, toast, t]);
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isFullscreen, isAdmin, toast, t]);
 
   const handleVideoPlay = () => {
     if (videoRef.current) {
@@ -791,6 +720,17 @@ const LearningCenter = () => {
                         </div>
                       </div>
                     )}
+                    {/* Exit fullscreen button - only visible in fullscreen mode */}
+                    {isFullscreen && (
+                      <Button
+                        onClick={toggleFullscreen}
+                        size="sm"
+                        variant="ghost"
+                        className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 transition-all duration-200"
+                      >
+                        <Minimize className="w-5 h-5" />
+                      </Button>
+                    )}
                   </div>
 
                   {/* Video Controls - Above timeline with status label */}
@@ -860,8 +800,8 @@ const LearningCenter = () => {
                           <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-black/80 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-10">
                             {isFullscreen
                               ? language === "en"
-                                ? "Exit fullscreen"
-                                : "Quitter le plein écran"
+                                ? "Exit fullscreen (Esc)"
+                                : "Quitter le plein écran (Échap)"
                               : language === "en"
                               ? "Enter fullscreen"
                               : "Plein écran"}
