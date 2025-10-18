@@ -145,21 +145,18 @@ const AdminLearningManagement = () => {
         .from("learning")
         .upload(filePath, selectedFile);
 
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
       const {
         data: { publicUrl },
       } = supabase.storage.from("learning").getPublicUrl(filePath);
 
       return publicUrl;
-    } catch (error: any) {
+    } catch (error) {
       console.error("File upload failed:", error);
       toast({
-        title: "Upload Error",
-        description: error?.message || "Failed to upload file. Please check storage permissions.",
+        title: "Error",
+        description: "Failed to upload file",
         variant: "destructive",
       });
       return null;

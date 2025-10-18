@@ -29,24 +29,19 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
 
     const checkAdminStatus = async () => {
       try {
-        // Check current session
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user && mounted) {
-          // Check if user has admin role
-          const { data: roleData } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", session.user.id)
-            .eq("role", "admin")
-            .maybeSingle();
+        const hardcodedAdmin = safeLocalStorage.getItem("hardcoded_admin");
 
-          if (roleData && mounted) {
-            setAdmin(session.user);
+        if (hardcodedAdmin) {
+          const adminData = JSON.parse(hardcodedAdmin);
+          if (mounted) {
+            setAdmin(adminData as User);
             setIsAdmin(true);
+            setLoading(false);
           }
+          return;
         }
-        
+
+        // For regular admin checking, we'll rely on the auth listener
         if (mounted) {
           setLoading(false);
         }
@@ -67,6 +62,22 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
+
+      // Check for hardcoded admin first
+      const hardcodedAdmin = safeLocalStorage.getItem("hardcoded_admin");
+      if (hardcodedAdmin) {
+        try {
+          const adminData = JSON.parse(hardcodedAdmin);
+          if (mounted) {
+            setAdmin(adminData as User);
+            setIsAdmin(true);
+          }
+          return;
+        } catch (error) {
+          console.error("Error parsing hardcoded admin:", error);
+          safeLocalStorage.removeItem("hardcoded_admin");
+        }
+      }
 
       if (session?.user) {
         try {
@@ -106,7 +117,7 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    safeLocalStorage.removeItem("hardcoded_admin");
     setAdmin(null);
     setIsAdmin(false);
   };
