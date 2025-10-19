@@ -53,22 +53,17 @@ const Leaderboard = () => {
   const fetchPlayers = async () => {
     setLoading(true);
     try {
-      // First, get all verified players with all required fields
-      let query = supabase
+      // Get all players with required fields for leaderboard
+      const { data, error } = await supabase
         .from("players")
         .select(
-          "id, full_name, cssbattle_profile_link, score, group_name, email, phone, created_at, video_completed, verified_ofppt"
-        )
-        .eq("verified_ofppt", true); // Only show verified players
-
-      // Apply group filter if not "all"
-      if (groupFilter !== "all") {
-        query = query.eq("group_name", groupFilter);
-      }
-
-      const { data, error } = await query;
+          "id, full_name, score, group_name, email"
+        );
 
       if (error) throw error;
+
+      console.log("Leaderboard - Fetched players data:", data);
+      console.log("Leaderboard - Total players count:", data?.length);
 
       // Sort players by score in descending order, handling null/undefined values
       const sortedPlayers = (data || []).sort((a, b) => {
@@ -77,8 +72,11 @@ const Leaderboard = () => {
         return scoreB - scoreA; // Descending order
       });
 
+      console.log("Leaderboard - Sorted players:", sortedPlayers);
+
       setPlayers(sortedPlayers);
     } catch (error) {
+      console.error("Leaderboard - Error fetching players:", error);
       toast({
         title: language === "en" ? "Error" : "Erreur",
         description:
@@ -128,7 +126,7 @@ const Leaderboard = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [groupFilter]);
+  }, [groupFilter, language]);
 
   const getRankIcon = (index: number) => {
     if (index === 0) return <Crown className="w-5 h-5 text-yellow-500" />;
