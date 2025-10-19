@@ -7,6 +7,8 @@ import { useAdmin } from "@/contexts/AdminContext";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import FloatingShape from "@/components/FloatingShape";
+import usePreventRightClick from "@/hooks/usePreventRightClick";
 import {
   User as UserIcon,
   Mail,
@@ -53,6 +55,9 @@ const ProfileNew = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Prevent right-click for players and non-authenticated users
+  usePreventRightClick();
 
   // Fetch player profile data
   const fetchPlayerProfile = async () => {
@@ -181,8 +186,33 @@ const ProfileNew = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4 sm:px-6 mt-20">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-background py-12 px-4 sm:px-6 mt-20 overflow-hidden relative">
+      {/* Animated Background Shapes */}
+      <FloatingShape color="purple" size={220} top="8%" left="85%" delay={0} />
+      <FloatingShape
+        color="pink"
+        size={160}
+        top="75%"
+        left="10%"
+        delay={1}
+        rotation
+      />
+      <FloatingShape
+        color="yellow"
+        size={110}
+        top="45%"
+        left="80%"
+        delay={0.5}
+      />
+      <FloatingShape
+        color="purple"
+        size={130}
+        top="85%"
+        left="25%"
+        delay={1.5}
+      />
+
+      <div className="max-w-4xl mx-auto relative z-10">
         <div className="flex items-center justify-between mb-8">
           <Button
             variant="ghost"
@@ -235,7 +265,7 @@ const ProfileNew = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6 text-left">
             <div className="space-y-2">
               <Label
                 htmlFor="fullName"

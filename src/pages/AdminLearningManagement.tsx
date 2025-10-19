@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { createLearningBucket } from "@/lib/storageUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import FloatingShape from "@/components/FloatingShape";
 import {
   Select,
   SelectContent,
@@ -24,6 +24,7 @@ import {
   BookOpen,
   PlusCircle,
   RefreshCw,
+  Target,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/contexts/AdminContext";
@@ -50,6 +51,10 @@ interface LearningResource {
   url: string;
   type: "pdf" | "doc" | "link" | "video";
   created_at: string;
+  file_data?: string;
+  file_name?: string;
+  file_size?: number;
+  file_type?: string;
 }
 
 const AdminLearningManagement = () => {
@@ -61,7 +66,6 @@ const AdminLearningManagement = () => {
   const [resources, setResources] = useState<LearningResource[]>([]);
   const [showAddResource, setShowAddResource] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
-  const [creatingBucket, setCreatingBucket] = useState(false);
   const [newResource, setNewResource] = useState({
     title: "",
     description: "",
@@ -70,28 +74,17 @@ const AdminLearningManagement = () => {
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  // Calculate statistics
+  const totalQuizScores = quizScores.length;
+  const totalResources = resources.length;
+  const averageScore = quizScores.length > 0 
+    ? quizScores.reduce((sum, score) => sum + score.score, 0) / quizScores.length
+    : 0;
+
   const fetchData = async () => {
     setLoading(true);
     await Promise.all([fetchQuizScores(), fetchResources()]);
     setLoading(false);
-  };
-
-  // Check if the learning bucket exists when the component mounts
-  const checkBucket = async () => {
-    try {
-      const { data, error } = await supabase.storage.getBucket("learning");
-
-      if (error && error.message.includes("not found")) {
-        toast({
-          title: "Storage Bucket Missing",
-          description:
-            "The 'learning' storage bucket doesn't exist. Please click 'Create Bucket' above to create it.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error checking bucket:", error);
-    }
   };
 
   useEffect(() => {
@@ -101,7 +94,6 @@ const AdminLearningManagement = () => {
       return;
     }
     fetchData();
-    checkBucket();
 
     // Set up periodic refresh every 30 seconds
     const interval = setInterval(() => {
@@ -110,44 +102,6 @@ const AdminLearningManagement = () => {
 
     return () => clearInterval(interval);
   }, [isAdmin, adminLoading, navigate]);
-
-  const handleCreateBucket = async () => {
-    if (!admin) {
-      toast({
-        title: "Error",
-        description: "Admin privileges required to create storage bucket",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setCreatingBucket(true);
-      const { success, message } = await createLearningBucket();
-
-      if (success) {
-        toast({
-          title: "Success",
-          description: message,
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error creating bucket:", error);
-      toast({
-        title: "Error",
-        description: `Failed to create bucket: ${error.message || error}`,
-        variant: "destructive",
-      });
-    } finally {
-      setCreatingBucket(false);
-    }
-  };
 
   const fetchQuizScores = async () => {
     try {
@@ -216,80 +170,30 @@ const AdminLearningManagement = () => {
 
     try {
       setUploadingFile(true);
-      const fileExt = selectedFile.name.split(".").pop();
-      const fileName = `${Date.now()}_${Math.random()
-        .toString(36)
-        .substring(7)}.${fileExt}`;
-      const filePath = `resources/${fileName}`;
-
-      console.log("Attempting to upload file:", {
-        name: selectedFile.name,
-        size: selectedFile.size,
-        type: selectedFile.type,
-        filePath: filePath,
+      
+      // Convert file to base64 for database storage
+      const fileData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(selectedFile); // This will create a data URL with base64 encoding
       });
 
-      // First, let's check if we can access the storage bucket
-      const { data: bucketData, error: bucketError } =
-        await supabase.storage.getBucket("learning");
+      // Extract base64 data (remove the data URL prefix)
+      const base64Data = fileData.split(',')[1] || fileData;
 
-      if (bucketError) {
-        console.error("Bucket access error:", bucketError);
-
-        // If bucket doesn't exist, provide helpful instructions
-        if (bucketError.message && bucketError.message.includes("not found")) {
-          toast({
-            title: "Storage Bucket Missing",
-            description:
-              "The 'learning' storage bucket doesn't exist. Please click 'Create Bucket' button above to create it, or contact your system administrator.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Error",
-            description: `Cannot access storage bucket: ${bucketError.message}`,
-            variant: "destructive",
-          });
-        }
-        return null;
-      }
-
-      console.log("Bucket access successful:", bucketData);
-
-      const { data, error: uploadError } = await supabase.storage
-        .from("learning")
-        .upload(filePath, selectedFile, {
-          cacheControl: "3600",
-          upsert: false,
-        });
-
-      if (uploadError) {
-        console.error("Detailed upload error:", uploadError.message);
-        console.error(
-          "Full error details:",
-          JSON.stringify(uploadError, null, 2)
-        );
-        toast({
-          title: "Error",
-          description: `Failed to upload file: ${uploadError.message}`,
-          variant: "destructive",
-        });
-        return null;
-      }
-
-      console.log("Upload successful:", data);
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("learning").getPublicUrl(filePath);
-
-      console.log("Public URL generated:", publicUrl);
-      return publicUrl;
+      // Return file information to be stored in the database
+      return {
+        file_data: base64Data,
+        file_name: selectedFile.name,
+        file_size: selectedFile.size,
+        file_type: selectedFile.type,
+      };
     } catch (error) {
-      console.error("Unexpected error during file upload:", error);
+      console.error("Error processing file:", error);
       toast({
         title: "Error",
-        description: `Unexpected error: ${error.message || error}`,
+        description: `Failed to process file: ${error.message || error}`,
         variant: "destructive",
       });
       return null;
@@ -329,32 +233,41 @@ const AdminLearningManagement = () => {
     try {
       setLoading(true);
 
-      let resourceUrl = newResource.url;
+      // Prepare resource data
+      const resourceData: any = {
+        title: newResource.title,
+        description: newResource.description || "",
+        type: newResource.type,
+        created_by: admin.id,
+      };
+
+      // Handle file upload if a file is selected
       if (selectedFile) {
-        const uploadedUrl = await handleFileUpload();
-        if (!uploadedUrl) {
+        const fileData = await handleFileUpload();
+        if (!fileData) {
           // File upload failed, stop the process
           console.log("File upload failed, stopping resource creation");
           return;
         }
-        resourceUrl = uploadedUrl;
+        
+        // Store file data in the resource object
+        resourceData.file_data = fileData.file_data;
+        resourceData.file_name = fileData.file_name;
+        resourceData.file_size = fileData.file_size;
+        resourceData.file_type = fileData.file_type;
+        resourceData.url = null; // No URL for file resources
+      } else {
+        // Store URL for link resources
+        resourceData.url = newResource.url;
+        resourceData.file_data = null;
+        resourceData.file_name = null;
+        resourceData.file_size = null;
+        resourceData.file_type = null;
       }
 
-      console.log("Inserting resource into database:", {
-        title: newResource.title,
-        description: newResource.description || "",
-        url: resourceUrl,
-        type: newResource.type,
-        created_by: admin.id,
-      });
+      console.log("Inserting resource into database:", resourceData);
 
-      const { data, error } = await supabase.from("learning_resources").insert({
-        title: newResource.title,
-        description: newResource.description || "",
-        url: resourceUrl,
-        type: newResource.type,
-        created_by: admin.id,
-      });
+      const { data, error } = await supabase.from("learning_resources").insert(resourceData);
 
       if (error) {
         console.error("Database insert error:", error);
@@ -425,8 +338,36 @@ const AdminLearningManagement = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4 sm:px-6 mt-16">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-background py-12 px-4 sm:px-6 mt-16 overflow-hidden relative">
+      {/* Animated Background Shapes */}
+      <FloatingShape color="purple" size={300} top="5%" left="10%" delay={0.5} />
+      <FloatingShape color="pink" size={150} top="20%" left="50%" delay={1} />
+      <FloatingShape color="pink" size={200} top="70%" left="70%" delay={0} />
+      <FloatingShape color="purple" size={250} top="8%" left="85%" delay={0} />
+      <FloatingShape
+        color="pink"
+        size={180}
+        top="75%"
+        left="10%"
+        delay={1}
+        rotation
+      />
+      <FloatingShape
+        color="yellow"
+        size={130}
+        top="45%"
+        left="80%"
+        delay={0.5}
+      />
+      <FloatingShape
+        color="purple"
+        size={150}
+        top="80%"
+        left="20%"
+        delay={1.5}
+      />
+
+      <div className="max-w-7xl mx-auto relative z-10">
         <div className="flex items-center justify-between mb-8">
           <Button
             onClick={() => navigate("/admin/dashboard")}
@@ -447,6 +388,49 @@ const AdminLearningManagement = () => {
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="bg-gradient-to-br from-purple-500/20 to-indigo-500/20 backdrop-blur-sm border-primary/30 p-6">
+            <div className="flex items-center">
+              <Trophy className="w-8 h-8 text-primary mr-4" />
+              <div>
+                <p className="text-sm font-medium text-foreground/80">
+                  Total Quiz Scores
+                </p>
+                <p className="text-2xl font-bold text-foreground">
+                  {totalQuizScores}
+                </p>
+              </div>
+            </div>
+          </Card>
+          <Card className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 backdrop-blur-sm border-primary/30 p-6">
+            <div className="flex items-center">
+              <BookOpen className="w-8 h-8 text-primary mr-4" />
+              <div>
+                <p className="text-sm font-medium text-foreground/80">
+                  Total Resources
+                </p>
+                <p className="text-2xl font-bold text-foreground">
+                  {totalResources}
+                </p>
+              </div>
+            </div>
+          </Card>
+          <Card className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm border-primary/30 p-6">
+            <div className="flex items-center">
+              <Target className="w-8 h-8 text-primary mr-4" />
+              <div>
+                <p className="text-sm font-medium text-foreground/80">
+                  Average Score
+                </p>
+                <p className="text-2xl font-bold text-foreground">
+                  {averageScore.toFixed(1)}
+                </p>
+              </div>
+            </div>
+          </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -512,15 +496,6 @@ const AdminLearningManagement = () => {
                   Learning Resources
                 </CardTitle>
                 <div className="flex gap-2">
-                  <Button
-                    onClick={handleCreateBucket}
-                    disabled={creatingBucket}
-                    variant="outline"
-                    size="sm"
-                    className="border-primary/50"
-                  >
-                    {creatingBucket ? "Creating..." : "Create Bucket"}
-                  </Button>
                   <Button
                     onClick={() => setShowAddResource(!showAddResource)}
                     size="sm"
@@ -671,12 +646,94 @@ const AdminLearningManagement = () => {
                           <Badge variant="secondary" className="mt-2">
                             {resource.type.toUpperCase()}
                           </Badge>
+                          {resource.file_name && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              File: {resource.file_name} ({Math.round((resource.file_size || 0) / 1024)} KB)
+                            </p>
+                          )}
+                          {resource.created_at && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Added: {new Date(resource.created_at).toLocaleDateString()}
+                            </p>
+                          )}
                         </div>
                         <div className="flex gap-2 ml-4">
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => window.open(resource.url, "_blank")}
+                            onClick={async () => {
+                              // If it's a file resource, create a download link
+                              if (resource.file_data) {
+                                try {
+                                  // Fetch the full resource data from the database to get the raw byte data
+                                  const { data, error } = await supabase
+                                    .from("learning_resources")
+                                    .select("file_data, file_name, file_type")
+                                    .eq("id", resource.id)
+                                    .single();
+                                    
+                                  if (error) throw error;
+                                  
+                                  if (data && data.file_data) {
+                                    try {
+                                      // Convert base64 to binary data
+                                      const byteCharacters = atob(data.file_data);
+                                      const byteNumbers = new Array(byteCharacters.length);
+                                      for (let i = 0; i < byteCharacters.length; i++) {
+                                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                      }
+                                      const byteArray = new Uint8Array(byteNumbers);
+                                      const blob = new Blob([byteArray], { 
+                                        type: data.file_type || 'application/octet-stream' 
+                                      });
+                                      
+                                      // Create download link
+                                      const url = URL.createObjectURL(blob);
+                                      const a = document.createElement('a');
+                                      a.href = url;
+                                      a.download = data.file_name || 'download';
+                                      document.body.appendChild(a);
+                                      a.click();
+                                      document.body.removeChild(a);
+                                      URL.revokeObjectURL(url);
+                                    } catch (processingError) {
+                                      console.error("Error processing file data:", processingError);
+                                      // Fallback: try to create a blob directly from the data
+                                      try {
+                                        const blob = new Blob([data.file_data], { 
+                                          type: data.file_type || 'application/octet-stream' 
+                                        });
+                                        const url = URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = data.file_name || 'download';
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        document.body.removeChild(a);
+                                        URL.revokeObjectURL(url);
+                                      } catch (fallbackError) {
+                                        console.error("Fallback error:", fallbackError);
+                                        toast({
+                                          title: "Error",
+                                          description: "Failed to process file data. The file may be corrupted.",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }
+                                  }
+                                } catch (error) {
+                                  console.error("Error downloading file:", error);
+                                  toast({
+                                    title: "Error",
+                                    description: "Failed to download file. There was a database error.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              } else {
+                                // For URL resources, open in new tab
+                                window.open(resource.url, "_blank");
+                              }
+                            }}
                           >
                             <Download className="w-4 h-4" />
                           </Button>

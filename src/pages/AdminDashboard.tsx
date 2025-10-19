@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import FloatingShape from "@/components/FloatingShape";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1026,13 +1027,39 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4 sm:px-6 mt-16">
+    <div className="min-h-screen bg-background py-12 px-4 sm:px-6 mt-16 overflow-hidden relative">
       <Navbar />
       <MessagesPanel
         isOpen={isMessagesPanelOpen}
         onClose={() => setIsMessagesPanelOpen(false)}
       />
-      <div className="max-w-7xl mx-auto">
+      
+      {/* Animated Background Shapes */}
+      <FloatingShape color="purple" size={280} top="5%" left="85%" delay={0} />
+      <FloatingShape
+        color="pink"
+        size={200}
+        top="70%"
+        left="5%"
+        delay={1}
+        rotation
+      />
+      <FloatingShape
+        color="yellow"
+        size={140}
+        top="40%"
+        left="80%"
+        delay={0.5}
+      />
+      <FloatingShape
+        color="purple"
+        size={160}
+        top="85%"
+        left="15%"
+        delay={1.5}
+      />
+
+      <div className="max-w-7xl mx-auto relative z-10">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div></div> {/* Empty div for spacing */}
@@ -1832,3 +1859,5 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
+

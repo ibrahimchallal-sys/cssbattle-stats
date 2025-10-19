@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import FloatingShape from "@/components/FloatingShape";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/contexts/AdminContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import usePreventRightClick from "@/hooks/usePreventRightClick";
 import { supabase } from "@/integrations/supabase/client";
 
 interface QuizQuestion {
@@ -45,6 +47,11 @@ interface LearningResource {
   description: string;
   url: string;
   type: "pdf" | "doc" | "link" | "video";
+  file_data?: string; // Add file data field
+  file_name?: string; // Add file name field
+  file_size?: number; // Add file size field
+  file_type?: string; // Add file type field
+  created_at?: string; // Add created_at field
 }
 
 const LearningCenter = () => {
@@ -55,6 +62,9 @@ const LearningCenter = () => {
   const { t, language } = useLanguage();
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Prevent right-click for players and non-authenticated users
+  usePreventRightClick();
 
   // Video state
   const [isPlaying, setIsPlaying] = useState(false);
@@ -253,6 +263,11 @@ const LearningCenter = () => {
             description: r.description || "",
             url: r.url,
             type: r.type as "pdf" | "doc" | "link" | "video",
+            file_data: r.file_data,
+            file_name: r.file_name,
+            file_size: r.file_size,
+            file_type: r.file_type,
+            created_at: r.created_at,
           }))
         );
       } catch (error) {
@@ -838,10 +853,35 @@ const LearningCenter = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+    <div className="min-h-screen bg-background overflow-hidden relative">
       <Navbar />
+      
+      {/* Animated Background Shapes */}
+      <FloatingShape color="purple" size={200} top="10%" left="5%" delay={0} />
+      <FloatingShape
+        color="pink"
+        size={150}
+        top="70%"
+        left="85%"
+        delay={1}
+        rotation
+      />
+      <FloatingShape
+        color="yellow"
+        size={100}
+        top="40%"
+        left="80%"
+        delay={0.5}
+      />
+      <FloatingShape
+        color="purple"
+        size={120}
+        top="85%"
+        left="15%"
+        delay={1.5}
+      />
 
-      <main className="container mx-auto px-4 py-8 mt-20">
+      <main className="relative z-10 container mx-auto px-4 py-8 mt-16">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-4">
@@ -1095,74 +1135,6 @@ const LearningCenter = () => {
               </CardContent>
             </Card>
 
-            {/* Learning Resources Section - Always show */}
-            <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <BookOpen className="w-5 h-5 mr-2 text-battle-purple" />
-                  {t("learning.resources.title")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loadingResources ? (
-                  <div className="flex justify-center items-center h-32">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-battle-purple"></div>
-                  </div>
-                ) : resources.length === 0 ? (
-                  <div className="text-center py-8">
-                    <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">
-                      {t("learning.resources.noResources")}
-                    </h3>
-                    <p className="text-muted-foreground">
-                      {t("learning.resources.noResourcesDesc")}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {resources.map((resource) => (
-                      <div
-                        key={resource.id}
-                        className="p-4 bg-background/50 rounded-lg border border-border hover:border-battle-purple/50 transition-colors"
-                      >
-                        <div className="flex items-start">
-                          <div className="mr-3 mt-1">
-                            {getResourceIcon(resource.type)}
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-foreground">
-                              {resource.title}
-                            </h3>
-                            {resource.description && (
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {resource.description}
-                              </p>
-                            )}
-                            <div className="flex items-center mt-2">
-                              <Badge variant="secondary" className="text-xs">
-                                {resource.type.toUpperCase()}
-                              </Badge>
-                              <Button
-                                variant="link"
-                                size="sm"
-                                className="ml-auto p-0 h-auto text-battle-purple hover:text-battle-pink"
-                                onClick={() =>
-                                  window.open(resource.url, "_blank")
-                                }
-                              >
-                                {t("learning.resources.view")}
-                                <ExternalLink className="w-4 h-4 ml-1" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
             {/* Quiz Section - Only show if quiz is not completed */}
             {!quizCompleted && (
               <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30">
@@ -1335,9 +1307,9 @@ const LearningCenter = () => {
               </Card>
             )}
 
-            {/* Show completion message below the video when quiz is completed */}
+            {/* Show quiz results when completed */}
             {quizCompleted && (
-              <div className="bg-card/50 backdrop-blur-sm border border-battle-purple/30 rounded-lg p-6">
+              <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30">
                 <div className="text-center py-4">
                   <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
                   <h3 className="text-2xl font-bold mb-2">
@@ -1352,8 +1324,169 @@ const LearningCenter = () => {
                     {t("learning.quiz.completedMessage")}
                   </p>
                 </div>
-              </div>
+              </Card>
             )}
+
+            {/* Learning Resources Section - Moved to be below other sections */}
+            <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <BookOpen className="w-5 h-5 mr-2 text-battle-purple" />
+                  {t("learning.resources.title")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingResources ? (
+                  <div className="flex justify-center items-center h-32">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-battle-purple"></div>
+                  </div>
+                ) : resources.length === 0 ? (
+                  <div className="text-center py-8">
+                    <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">
+                      {t("learning.resources.none")}
+                    </h3>
+                    <p className="text-muted-foreground">
+                      {t("learning.resources.noneDesc")}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {resources.map((resource) => (
+                      <div
+                        key={resource.id}
+                        className="p-4 bg-background/50 rounded-lg border border-border hover:border-battle-purple/50 transition-colors"
+                      >
+                        <div className="flex items-start">
+                          <div className="mr-3 mt-1">
+                            {getResourceIcon(resource.type)}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h3 className="font-semibold text-foreground">
+                                  {resource.title}
+                                </h3>
+                                {resource.description && (
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {resource.description}
+                                  </p>
+                                )}
+                                <div className="flex items-center mt-2">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {resource.type.toUpperCase()}
+                                  </Badge>
+                                  <span className="text-xs text-foreground/50 ml-2">
+                                    {new Date(resource.created_at).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="mt-3">
+                              <Button
+                                variant="link"
+                                size="sm"
+                                className="p-0 h-auto text-battle-purple hover:text-battle-pink"
+                                onClick={async () => {
+                                  // If it's a file stored in the database, create a download link
+                                  if (resource.file_data) {
+                                    try {
+                                      // Fetch the full resource data from the database to get the raw byte data
+                                      const { data, error } = await supabase
+                                        .from("learning_resources")
+                                        .select("file_data, file_name, file_type")
+                                        .eq("id", resource.id)
+                                        .single();
+                                        
+                                      if (error) throw error;
+                                      
+                                      if (data && data.file_data) {
+                                        try {
+                                          // First, try to determine if the data is base64 encoded or raw binary
+                                          let blob;
+                                          
+                                          // Check if it's a valid base64 string
+                                          const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(data.file_data) && 
+                                                           data.file_data.length % 4 === 0;
+                                          
+                                          if (isBase64) {
+                                            // Convert base64 to binary data
+                                            const byteCharacters = atob(data.file_data);
+                                            const byteNumbers = new Array(byteCharacters.length);
+                                            for (let i = 0; i < byteCharacters.length; i++) {
+                                              byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                            }
+                                            const byteArray = new Uint8Array(byteNumbers);
+                                            blob = new Blob([byteArray], { 
+                                              type: data.file_type || 'application/octet-stream' 
+                                            });
+                                          } else {
+                                            // Treat as raw string data
+                                            blob = new Blob([data.file_data], { 
+                                              type: data.file_type || 'application/octet-stream' 
+                                            });
+                                          }
+                                          
+                                          // Create download link
+                                          const url = URL.createObjectURL(blob);
+                                          const a = document.createElement('a');
+                                          a.href = url;
+                                          a.download = data.file_name || 'download';
+                                          document.body.appendChild(a);
+                                          a.click();
+                                          document.body.removeChild(a);
+                                          URL.revokeObjectURL(url);
+                                        } catch (processingError) {
+                                          console.error("Error processing file data:", processingError);
+                                          // Fallback: try to create a blob directly from the data
+                                          try {
+                                            const blob = new Blob([data.file_data], { 
+                                              type: data.file_type || 'application/octet-stream' 
+                                            });
+                                            const url = URL.createObjectURL(blob);
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            a.download = data.file_name || 'download';
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            document.body.removeChild(a);
+                                            URL.revokeObjectURL(url);
+                                          } catch (fallbackError) {
+                                            console.error("Fallback error:", fallbackError);
+                                            toast({
+                                              title: "Error",
+                                              description: "Failed to process file data. The file may be corrupted.",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        }
+                                      }
+                                    } catch (error) {
+                                      console.error("Error downloading file:", error);
+                                      toast({
+                                        title: "Error",
+                                        description: "Failed to download file. There was a database error.",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  } else {
+                                    // For URL resources, open in new tab
+                                    window.open(resource.url, "_blank");
+                                  }
+                                }}
+                              >
+                                {resource.file_data ? "Download File" : "Visit Link"}
+                                <ExternalLink className="w-3 h-3 ml-1" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>

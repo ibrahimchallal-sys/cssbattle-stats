@@ -84,3 +84,63 @@ export const checkLearningBucket = async (): Promise<{ exists: boolean; message:
     return { exists: false, message: `Unexpected error: ${error.message || error}` };
   }
 };
+
+/**
+ * Diagnose storage issues
+ */
+export const diagnoseStorage = async (): Promise<{ status: string; details: any }> => {
+  try {
+    console.log("Starting storage diagnosis...");
+    
+    // 1. List all buckets
+    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+    console.log("Buckets list:", buckets, "Error:", bucketsError);
+    
+    // 2. Check if learning bucket exists
+    const { data: learningBucket, error: learningError } = await supabase.storage.getBucket("learning");
+    console.log("Learning bucket:", learningBucket, "Error:", learningError);
+    
+    // 3. Try to create bucket if it doesn't exist
+    let createResult = null;
+    if (learningError && learningError.message.includes("not found")) {
+      console.log("Attempting to create learning bucket...");
+      const { data: createData, error: createError } = await supabase.storage.createBucket("learning", {
+        public: true
+      });
+      createResult = { data: createData, error: createError };
+      console.log("Create bucket result:", createResult);
+    }
+    
+    // 4. Test upload if bucket exists
+    let uploadTest = null;
+    if (learningBucket || (createResult && createResult.data)) {
+      console.log("Testing file upload...");
+      const testContent = "Test file content";
+      const blob = new Blob([testContent], { type: "text/plain" });
+      const file = new File([blob], "diagnostic-test.txt", { type: "text/plain" });
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("learning")
+        .upload(`diagnostic/${Date.now()}_test.txt`, file);
+      
+      uploadTest = { data: uploadData, error: uploadError };
+      console.log("Upload test result:", uploadTest);
+    }
+    
+    return {
+      status: "completed",
+      details: {
+        buckets: { data: buckets, error: bucketsError },
+        learningBucket: { data: learningBucket, error: learningError },
+        createResult,
+        uploadTest
+      }
+    };
+  } catch (error) {
+    console.error("Diagnosis error:", error);
+    return {
+      status: "error",
+      details: { error: error.message || error }
+    };
+  }
+};

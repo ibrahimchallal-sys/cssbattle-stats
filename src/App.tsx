@@ -14,6 +14,7 @@ import PasswordReset from "./pages/PasswordReset";
 import DatabaseTest from "./pages/DatabaseTest";
 import DatabasePermissionsTest from "./pages/DatabasePermissionsTest";
 import TestPlayerFetch from "./pages/TestPlayerFetch";
+import TestStorage from "./pages/TestStorage";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import PlayerProtectedRoute from "./components/PlayerProtectedRoute";
 import PlayerMessagesPanel from "./components/PlayerMessagesPanel";
@@ -165,6 +166,17 @@ const AppContent = () => {
               <Navbar />
               <TestPlayerFetch />
             </>
+          }
+        />
+        <Route
+          path="/test-storage"
+          element={
+            <AdminProtectedRoute>
+              <>
+                <Navbar />
+                <TestStorage />
+              </>
+            </AdminProtectedRoute>
           }
         />
       </Routes>

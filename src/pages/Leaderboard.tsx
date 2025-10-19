@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
+import FloatingShape from "@/components/FloatingShape";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import usePreventRightClick from "@/hooks/usePreventRightClick";
 import { GROUP_OPTIONS } from "@/constants/groups";
 
 interface Player {
@@ -45,14 +47,17 @@ const Leaderboard = () => {
   const { user } = useAuth();
   const { t, language } = useLanguage();
 
+  // Prevent right-click for players and non-authenticated users
+  usePreventRightClick();
+
   const fetchPlayers = async () => {
     setLoading(true);
     try {
-      // First, get all verified players
+      // First, get all verified players with all required fields
       let query = supabase
         .from("players")
         .select(
-          "id, full_name, cssbattle_profile_link, score, group_name, email, verified_ofppt"
+          "id, full_name, cssbattle_profile_link, score, group_name, email, phone, created_at, video_completed, verified_ofppt"
         )
         .eq("verified_ofppt", true); // Only show verified players
 
@@ -171,10 +176,35 @@ const Leaderboard = () => {
   const allGroups = GROUP_OPTIONS.map((option) => option.value);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 overflow-hidden relative">
       <Navbar />
+      
+      {/* Animated Background Shapes */}
+      <FloatingShape color="purple" size={250} top="5%" left="80%" delay={0} />
+      <FloatingShape
+        color="pink"
+        size={180}
+        top="65%"
+        left="5%"
+        delay={1}
+        rotation
+      />
+      <FloatingShape
+        color="yellow"
+        size={120}
+        top="35%"
+        left="85%"
+        delay={0.5}
+      />
+      <FloatingShape
+        color="purple"
+        size={150}
+        top="80%"
+        left="20%"
+        delay={1.5}
+      />
 
-      <main className="container mx-auto px-4 py-8 mt-20">
+      <main className="relative z-10 container mx-auto px-4 py-8 mt-20">
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
             <div>

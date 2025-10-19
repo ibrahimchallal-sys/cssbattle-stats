@@ -93,7 +93,11 @@ export type Database = {
           id: string
           title: string
           type: string
-          url: string
+          url: string | null
+          file_data: string | null
+          file_name: string | null
+          file_size: number | null
+          file_type: string | null
         }
         Insert: {
           created_at?: string
@@ -102,7 +106,11 @@ export type Database = {
           id?: string
           title: string
           type: string
-          url: string
+          url?: string | null
+          file_data?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
         }
         Update: {
           created_at?: string
@@ -111,7 +119,11 @@ export type Database = {
           id?: string
           title?: string
           type?: string
-          url?: string
+          url?: string | null
+          file_data?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
         }
         Relationships: []
       }

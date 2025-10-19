@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PasswordInput from "@/components/PasswordInput";
+import ForgotPasswordForm from "@/components/ForgotPasswordForm"; // Add this import
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -25,6 +26,7 @@ const Login = () => {
   const [error, setError] = useState<string | null>(null);
   const [showEmailVerificationMessage, setShowEmailVerificationMessage] =
     useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false); // Add this state
 
   // Redirect if already logged in
   useEffect(() => {
@@ -106,6 +108,27 @@ const Login = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Show forgot password form instead of login form
+  if (showForgotPassword) {
+    return (
+      <div className="min-h-screen bg-background py-12 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-center mb-8 pt-16">
+            {" "}
+            {/* Added pt-16 to account for fixed navbar */}
+            <h1 className="text-2xl font-bold text-center text-foreground">
+              CSS{" "}
+              <span className="bg-gradient-primary bg-clip-text text-transparent">
+                BATTLE
+              </span>
+            </h1>
+          </div>
+          <ForgotPasswordForm onBackToLogin={() => setShowForgotPassword(false)} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6">
@@ -216,7 +239,7 @@ const Login = () => {
               <Button
                 type="button"
                 variant="link"
-                onClick={() => navigate("/password-reset")}
+                onClick={() => setShowForgotPassword(true)} // Change this to show forgot password form
                 className="px-0 text-battle-purple hover:text-battle-pink"
               >
                 {language === "en"
