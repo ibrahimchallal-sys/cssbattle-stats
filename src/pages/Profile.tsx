@@ -17,7 +17,6 @@ import {
   Users,
   Shield,
   Phone,
-  MessageCircle,
 } from "lucide-react";
 import { GROUP_OPTIONS } from "@/constants/groups";
 import {
@@ -29,21 +28,66 @@ import {
 } from "@/components/ui/select";
 import LogoutButton from "@/components/LogoutButton";
 
-const Profile = () => {
+interface PlayerProfile {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  group_name: string | null;
+  cssbattle_profile_link: string | null;
+}
+
+const ProfileNew = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { isAdmin } = useAdmin();
   const [isEditing, setIsEditing] = useState(false);
-
+  const [playerProfile, setPlayerProfile] = useState<PlayerProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
-    fullName: user?.full_name || "",
-    cssBattleProfileLink: user?.cssbattle_profile_link || "",
-    phoneNumber: user?.phone || "",
-    group: user?.group_name || "",
+    fullName: "",
+    cssBattleProfileLink: "",
+    phoneNumber: "",
+    group: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Fetch player profile data
+  const fetchPlayerProfile = async () => {
+    if (!user?.id) return;
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("players")
+        .select("id, full_name, email, phone, group_name, cssbattle_profile_link")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to fetch profile: ${error.message}`);
+      }
+
+      setPlayerProfile(data);
+      setFormData({
+        fullName: data.full_name || "",
+        cssBattleProfileLink: data.cssbattle_profile_link || "",
+        phoneNumber: data.phone || "",
+        group: data.group_name || "",
+      });
+    } catch (err) {
+      console.error("Error fetching player profile:", err);
+      setError(`Failed to load profile: ${(err as Error).message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPlayerProfile();
+  }, [user?.id]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -62,46 +106,14 @@ const Profile = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!playerProfile?.id) return;
+
     setIsSubmitting(true);
     setError(null);
     setSuccess(null);
 
     try {
-      console.log("Profile - User object:", user);
-      console.log("Profile - User ID:", user?.id);
-
-      if (!user?.id) {
-        throw new Error("User ID is missing. Please log out and log back in.");
-      }
-
-      // Instead of using single(), let's use a more flexible approach
-      const { data: userData, error: userError } = await supabase
-        .from("players")
-        .select("id, full_name, email, group_name")
-        .eq("id", user.id);
-
-      console.log("Profile - User fetch result:", userData);
-      console.log("Profile - User fetch error:", userError);
-
-      if (userError) {
-        throw new Error(`Database error: ${userError.message}`);
-      }
-
-      if (!userData || userData.length === 0) {
-        throw new Error(
-          `User not found in database with ID: ${user.id}. This might indicate the user record doesn't exist in the players table.`
-        );
-      }
-
-      if (userData.length > 1) {
-        console.warn("Profile - Multiple users found with same ID:", userData);
-      }
-
-      const userRecord = userData[0];
-      console.log("Profile - Working with user record:", userRecord);
-
-      // Try the update
-      const { data: updateData, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from("players")
         .update({
           full_name: formData.fullName,
@@ -109,41 +121,18 @@ const Profile = () => {
           phone: formData.phoneNumber || null,
           group_name: formData.group || null,
         })
-        .eq("id", user.id);
-
-      console.log("Profile - Update result:", updateData);
-      console.log("Profile - Update error:", updateError);
+        .eq("id", playerProfile.id);
 
       if (updateError) {
-        // Log detailed error information
-        console.error("Profile - Detailed update error:", {
-          message: updateError.message,
-          code: updateError.code,
-          details: updateError.details,
-          hint: updateError.hint,
-        });
-
-        // Check if it's a permission error
-        if (updateError.code === "42501") {
-          throw new Error(
-            "Permission denied. You may not have the required permissions to update this record."
-          );
-        }
-
         throw new Error(`Update failed: ${updateError.message}`);
       }
 
-      // Check if any rows were affected
-      if (updateData === null) {
-        console.log(
-          "Profile - Update completed but no data returned. This is normal for update operations without select()."
-        );
-      }
-
+      // Refresh the profile data
+      await fetchPlayerProfile();
       setSuccess("Profile updated successfully!");
       setIsEditing(false);
     } catch (err) {
-      console.error("Profile - Update error:", err);
+      console.error("Profile update error:", err);
       setError(`Failed to update profile: ${(err as Error).message}`);
     } finally {
       setIsSubmitting(false);
@@ -180,9 +169,16 @@ const Profile = () => {
     );
   }
 
-  // Debug: Log user object
-  console.log("Profile - User object:", user);
-  console.log("Profile - User ID:", user?.id);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background py-12 px-4 sm:px-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-battle-purple mx-auto mb-4"></div>
+          <p className="text-foreground/80">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6 mt-20">
@@ -262,7 +258,7 @@ const Profile = () => {
                 </div>
               ) : (
                 <div className="p-3 bg-background/50 border border-battle-purple/30 rounded-md">
-                  {user.full_name}
+                  {playerProfile?.full_name || "Not provided"}
                 </div>
               )}
             </div>
@@ -277,7 +273,7 @@ const Profile = () => {
               <div className="p-3 bg-background/50 border border-battle-purple/30 rounded-md">
                 <div className="flex items-center">
                   <Mail className="w-4 h-4 mr-2 text-muted-foreground" />
-                  {user.email}
+                  {playerProfile?.email || "Not provided"}
                 </div>
               </div>
               <p className="text-xs text-foreground/50">
@@ -306,10 +302,10 @@ const Profile = () => {
                 </div>
               ) : (
                 <div className="p-3 bg-background/50 border border-battle-purple/30 rounded-md">
-                  {user.phone ? (
+                  {playerProfile?.phone ? (
                     <div className="flex items-center">
                       <Phone className="w-4 h-4 mr-2 text-muted-foreground" />
-                      {user.phone}
+                      {playerProfile.phone}
                     </div>
                   ) : (
                     <span className="text-foreground/50">Not provided</span>
@@ -345,10 +341,10 @@ const Profile = () => {
                 <div className="p-3 bg-background/50 border border-battle-purple/30 rounded-md">
                   <div className="flex items-center">
                     <Users className="w-4 h-4 mr-2 text-muted-foreground" />
-                    {user.group_name
+                    {playerProfile?.group_name
                       ? GROUP_OPTIONS.find(
-                          (option) => option.value === user.group_name
-                        )?.label || user.group_name
+                          (option) => option.value === playerProfile.group_name
+                        )?.label || playerProfile.group_name
                       : "No group assigned"}
                   </div>
                 </div>
@@ -376,11 +372,11 @@ const Profile = () => {
                 </div>
               ) : (
                 <div className="p-3 bg-background/50 border border-battle-purple/30 rounded-md">
-                  {user.cssbattle_profile_link ? (
+                  {playerProfile?.cssbattle_profile_link ? (
                     <div className="flex items-center">
                       <Link className="w-4 h-4 mr-2 text-muted-foreground" />
                       <a
-                        href={user.cssbattle_profile_link}
+                        href={playerProfile.cssbattle_profile_link}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-battle-purple hover:underline"
@@ -403,11 +399,12 @@ const Profile = () => {
                     variant="outline"
                     onClick={() => {
                       setIsEditing(false);
+                      // Reset form data to original values
                       setFormData({
-                        fullName: user.full_name || "",
-                        cssBattleProfileLink: user.cssbattle_profile_link || "",
-                        phoneNumber: user.phone || "",
-                        group: user.group_name || "",
+                        fullName: playerProfile?.full_name || "",
+                        cssBattleProfileLink: playerProfile?.cssbattle_profile_link || "",
+                        phoneNumber: playerProfile?.phone || "",
+                        group: playerProfile?.group_name || "",
                       });
                       setError(null);
                       setSuccess(null);
@@ -463,4 +460,4 @@ const Profile = () => {
   );
 };
 
-export default Profile;
+export default ProfileNew;

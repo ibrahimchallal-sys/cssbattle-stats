@@ -50,44 +50,63 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
-  // Fetch user profile data
+  // Fetch user profile data with all required fields
   const fetchUserProfile = async (session: Session) => {
     try {
-      const { data: profile, error } = await supabase
+      // Fetch player data with all required fields
+      let { data: profile, error } = await supabase
         .from("players")
         .select(
           "id, full_name, email, cssbattle_profile_link, group_name, phone, video_completed"
         )
-        .eq("email", session.user.email)
-        .maybeSingle();
+        .eq("id", session.user.id)
+        .single();
 
-      if (!error && profile) {
-        // Fetch unread message count for the player
-        const unreadCount = await fetchUnreadMessageCount(profile.email);
-
-        return {
-          id: profile.id,
-          email: profile.email,
-          full_name: profile.full_name,
-          cssbattle_profile_link: profile.cssbattle_profile_link || undefined,
-          email_confirmed_at: session.user.email_confirmed_at,
-          group_name: profile.group_name || undefined,
-          phone: profile.phone || undefined,
-          video_completed: profile.video_completed || false,
-          unreadMessageCount: unreadCount,
-        };
-      } else {
-        return {
-          id: session.user.id,
-          email: session.user.email!,
-          full_name: session.user.email!,
-          email_confirmed_at: session.user.email_confirmed_at,
-          video_completed: false,
-          unreadMessageCount: 0,
-        };
+      if (error) {
+        console.error("AuthContext - Error fetching player profile:", error);
+        // Try fetching by email as fallback
+        const { data: emailProfile, error: emailError } = await supabase
+          .from("players")
+          .select(
+            "id, full_name, email, cssbattle_profile_link, group_name, phone, video_completed"
+          )
+          .eq("email", session.user.email)
+          .single();
+          
+        if (emailError) {
+          console.error("AuthContext - Error fetching by email:", emailError);
+          // Return basic user data if no profile found
+          return {
+            id: session.user.id,
+            email: session.user.email!,
+            full_name: session.user.email!,
+            email_confirmed_at: session.user.email_confirmed_at,
+            video_completed: false,
+            unreadMessageCount: 0,
+          };
+        }
+        
+        profile = emailProfile;
       }
+
+      // Fetch unread message count for the player
+      const unreadCount = await fetchUnreadMessageCount(profile.email);
+
+      // Return complete user profile with all required fields
+      return {
+        id: profile.id,
+        email: profile.email,
+        full_name: profile.full_name || "",
+        cssbattle_profile_link: profile.cssbattle_profile_link || undefined,
+        email_confirmed_at: session.user.email_confirmed_at,
+        group_name: profile.group_name || undefined,
+        phone: profile.phone || undefined,
+        video_completed: profile.video_completed || false,
+        unreadMessageCount: unreadCount,
+      };
     } catch (error) {
-      console.error("Error fetching user profile:", error);
+      console.error("AuthContext - Error in fetchUserProfile:", error);
+      // Return basic user data on error
       return {
         id: session.user.id,
         email: session.user.email!,
@@ -326,14 +345,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         ]);
 
         if (insertError) {
+          console.error("AuthContext - Insert error:", insertError);
           return { success: false, error: insertError.message };
         }
 
+        console.log("AuthContext - Player registered successfully");
         return { success: true, requiresEmailVerification: true };
       }
 
       return { success: false, error: "Registration failed" };
     } catch (error) {
+      console.error("AuthContext - Registration error:", error);
       return { success: false, error: (error as Error).message };
     }
   };
