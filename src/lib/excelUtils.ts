@@ -6,6 +6,7 @@ export interface PlayerData {
   group_name: string;
   phone?: string;
   cssbattle_profile_link?: string;
+  verified_ofppt?: boolean;
 }
 
 /**
@@ -37,6 +38,8 @@ export const parseExcelFile = (file: File): Promise<PlayerData[]> => {
           const phone = row.phone || row.Phone;
           const cssLink = row.cssbattle_profile_link || row.CSSBattleProfileLink || 
                          row['CSS Battle Profile Link'] || row.css_link || row.CSSLink;
+          const verifiedOfppt = row.verified_ofppt || row.VerifiedOfppt || 
+                               row['Verified OFPPT'] || row.verified || row.Verified;
           
           if (!fullName || !email || !groupName) {
             throw new Error('Missing required fields: full_name, email, and group_name are required');
@@ -53,7 +56,8 @@ export const parseExcelFile = (file: File): Promise<PlayerData[]> => {
             email: email.toString().trim(),
             group_name: groupName.toString().trim(),
             phone: phone ? phone.toString().trim() : undefined,
-            cssbattle_profile_link: cssLink ? cssLink.toString().trim() : undefined
+            cssbattle_profile_link: cssLink ? cssLink.toString().trim() : undefined,
+            verified_ofppt: verifiedOfppt ? verifiedOfppt.toString().toLowerCase() === 'true' : false
           };
         });
         
@@ -78,9 +82,9 @@ export const parseExcelFile = (file: File): Promise<PlayerData[]> => {
 export const createPlayerTemplate = (): Blob => {
   // Create worksheet data
   const templateData = [
-    ['full_name', 'email', 'group_name', 'phone', 'cssbattle_profile_link'],
-    ['John Doe', 'john.doe@example.com', 'DD101', '123-456-7890', 'https://cssbattle.dev/player/johndoe'],
-    ['Jane Smith', 'jane.smith@example.com', 'DD102', '098-765-4321', 'https://cssbattle.dev/player/janesmith']
+    ['full_name', 'email', 'group_name', 'phone', 'cssbattle_profile_link', 'verified_ofppt'],
+    ['John Doe', 'john.doe@example.com', 'DD101', '123-456-7890', 'https://cssbattle.dev/player/johndoe', 'true'],
+    ['Jane Smith', 'jane.smith@example.com', 'DD102', '098-765-4321', 'https://cssbattle.dev/player/janesmith', 'false']
   ];
   
   // Create worksheet

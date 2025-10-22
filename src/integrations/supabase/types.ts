@@ -90,92 +90,44 @@ export type Database = {
           created_at: string
           created_by: string
           description: string | null
-          id: string
-          title: string
-          type: string
-          url: string | null
           file_data: string | null
           file_name: string | null
           file_size: number | null
           file_type: string | null
+          id: string
+          title: string
+          type: string
+          url: string | null
         }
         Insert: {
           created_at?: string
           created_by: string
           description?: string | null
-          id?: string
-          title: string
-          type: string
-          url?: string | null
           file_data?: string | null
           file_name?: string | null
           file_size?: number | null
           file_type?: string | null
+          id?: string
+          title: string
+          type: string
+          url?: string | null
         }
         Update: {
           created_at?: string
           created_by?: string
           description?: string | null
-          id?: string
-          title?: string
-          type?: string
-          url?: string | null
           file_data?: string | null
           file_name?: string | null
           file_size?: number | null
           file_type?: string | null
+          id?: string
+          title?: string
+          type?: string
+          url?: string | null
         }
         Relationships: []
       }
       players: {
-        Row: {
-          badges: string[] | null
-          created_at: string
-          cssbattle_profile_link: string | null
-          email: string
-          full_name: string
-          group_name: string | null
-          id: string
-          phone: string | null
-          rank: string | null
-          score: number | null
-          updated_at: string
-          verified_ofppt: boolean | null
-          video_completed: boolean | null
-        }
-        Insert: {
-          badges?: string[] | null
-          created_at?: string
-          cssbattle_profile_link?: string | null
-          email: string
-          full_name: string
-          group_name?: string | null
-          id: string
-          phone?: string | null
-          rank?: string | null
-          score?: number | null
-          updated_at?: string
-          verified_ofppt?: boolean | null
-          video_completed?: boolean | null
-        }
-        Update: {
-          badges?: string[] | null
-          created_at?: string
-          cssbattle_profile_link?: string | null
-          email?: string
-          full_name?: string
-          group_name?: string | null
-          id?: string
-          phone?: string | null
-          rank?: string | null
-          score?: number | null
-          updated_at?: string
-          verified_ofppt?: boolean | null
-          video_completed?: boolean | null
-        }
-        Relationships: []
-      }
-      players_public: {
         Row: {
           badges: string[] | null
           created_at: string
@@ -252,7 +204,7 @@ export type Database = {
           {
             foreignKeyName: "quiz_scores_player_id_fkey"
             columns: ["player_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "players"
             referencedColumns: ["id"]
           },
@@ -284,6 +236,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      backfill_admin_roles_from_admins: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       get_admin_contacts: {
         Args: Record<PropertyKey, never>
         Returns: {

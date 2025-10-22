@@ -25,10 +25,27 @@ import {
   PlusCircle,
   RefreshCw,
   Target,
+  Edit,
+  Search,
+  Filter,
+  Calendar,
+  File,
+  Video,
+  Link,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/contexts/AdminContext";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface QuizScore {
   id: string;
@@ -66,6 +83,8 @@ const AdminLearningManagement = () => {
   const [resources, setResources] = useState<LearningResource[]>([]);
   const [showAddResource, setShowAddResource] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [editingResource, setEditingResource] =
+    useState<LearningResource | null>(null);
   const [newResource, setNewResource] = useState({
     title: "",
     description: "",
@@ -74,12 +93,26 @@ const AdminLearningManagement = () => {
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  // Tab state
+  const [activeTab, setActiveTab] = useState("quiz");
+
+  // Resource filtering and pagination
+  const [searchTerm, setSearchTerm] = useState("");
+  const [resourceTypeFilter, setResourceTypeFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"date" | "title">("date");
+  const [visibleResources, setVisibleResources] = useState(5);
+  const [filteredResources, setFilteredResources] = useState<
+    LearningResource[]
+  >([]);
+
   // Calculate statistics
   const totalQuizScores = quizScores.length;
   const totalResources = resources.length;
-  const averageScore = quizScores.length > 0 
-    ? quizScores.reduce((sum, score) => sum + score.score, 0) / quizScores.length
-    : 0;
+  const averageScore =
+    quizScores.length > 0
+      ? quizScores.reduce((sum, score) => sum + score.score, 0) /
+        quizScores.length
+      : 0;
 
   const fetchData = async () => {
     setLoading(true);
@@ -102,6 +135,41 @@ const AdminLearningManagement = () => {
 
     return () => clearInterval(interval);
   }, [isAdmin, adminLoading, navigate]);
+
+  // Filter resources based on search term and type filter
+  useEffect(() => {
+    let result = [...resources];
+
+    // Apply search filter
+    if (searchTerm) {
+      result = result.filter(
+        (resource) =>
+          resource.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          resource.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply type filter
+    if (resourceTypeFilter !== "all") {
+      result = result.filter(
+        (resource) => resource.type === resourceTypeFilter
+      );
+    }
+
+    // Apply sorting
+    result.sort((a, b) => {
+      if (sortBy === "date") {
+        return (
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+      } else {
+        return a.title.localeCompare(b.title);
+      }
+    });
+
+    setFilteredResources(result);
+    setVisibleResources(5); // Reset to show only 5 resources when filters change
+  }, [resources, searchTerm, resourceTypeFilter, sortBy]);
 
   const fetchQuizScores = async () => {
     try {
@@ -134,9 +202,12 @@ const AdminLearningManagement = () => {
 
   const fetchResources = async () => {
     try {
+      // Don't load file_data by default - only load it when downloading
       const { data, error } = await supabase
         .from("learning_resources")
-        .select("*")
+        .select(
+          "id, title, description, url, type, created_at, file_name, file_size, file_type, created_by"
+        )
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -170,7 +241,7 @@ const AdminLearningManagement = () => {
 
     try {
       setUploadingFile(true);
-      
+
       // Convert file to base64 for database storage
       const fileData = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -180,7 +251,7 @@ const AdminLearningManagement = () => {
       });
 
       // Extract base64 data (remove the data URL prefix)
-      const base64Data = fileData.split(',')[1] || fileData;
+      const base64Data = fileData.split(",")[1] || fileData;
 
       // Return file information to be stored in the database
       return {
@@ -234,7 +305,17 @@ const AdminLearningManagement = () => {
       setLoading(true);
 
       // Prepare resource data
-      const resourceData: any = {
+      const resourceData: {
+        title: string;
+        description: string;
+        type: "pdf" | "doc" | "link" | "video";
+        created_by: string;
+        file_data?: string;
+        file_name?: string;
+        file_size?: number;
+        file_type?: string;
+        url?: string | null;
+      } = {
         title: newResource.title,
         description: newResource.description || "",
         type: newResource.type,
@@ -249,7 +330,7 @@ const AdminLearningManagement = () => {
           console.log("File upload failed, stopping resource creation");
           return;
         }
-        
+
         // Store file data in the resource object
         resourceData.file_data = fileData.file_data;
         resourceData.file_name = fileData.file_name;
@@ -267,7 +348,9 @@ const AdminLearningManagement = () => {
 
       console.log("Inserting resource into database:", resourceData);
 
-      const { data, error } = await supabase.from("learning_resources").insert(resourceData);
+      const { data, error } = await supabase
+        .from("learning_resources")
+        .insert(resourceData);
 
       if (error) {
         console.error("Database insert error:", error);
@@ -302,6 +385,98 @@ const AdminLearningManagement = () => {
     }
   };
 
+  const handleEditResource = (resource: LearningResource) => {
+    setEditingResource(resource);
+    setNewResource({
+      title: resource.title,
+      description: resource.description || "",
+      url: resource.url || "",
+      type: resource.type,
+    });
+    setShowAddResource(true);
+  };
+
+  const handleUpdateResource = async () => {
+    if (!admin || !editingResource) return;
+
+    if (!newResource.title) {
+      toast({
+        title: "Error",
+        description: "Please enter a title for the resource",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const resourceData: {
+        title: string;
+        description: string;
+        type: "pdf" | "doc" | "link" | "video";
+        file_data?: string;
+        file_name?: string;
+        file_size?: number;
+        file_type?: string;
+        url?: string | null;
+      } = {
+        title: newResource.title,
+        description: newResource.description || "",
+        type: newResource.type,
+      };
+
+      // Handle file upload if a new file is selected
+      if (selectedFile) {
+        const fileData = await handleFileUpload();
+        if (!fileData) {
+          return;
+        }
+
+        resourceData.file_data = fileData.file_data;
+        resourceData.file_name = fileData.file_name;
+        resourceData.file_size = fileData.file_size;
+        resourceData.file_type = fileData.file_type;
+        resourceData.url = null;
+      } else if (newResource.url && !editingResource.file_data) {
+        // Only update URL if there was no file before
+        resourceData.url = newResource.url;
+      }
+
+      const { error } = await supabase
+        .from("learning_resources")
+        .update(resourceData)
+        .eq("id", editingResource.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Resource updated successfully",
+      });
+
+      setNewResource({
+        title: "",
+        description: "",
+        url: "",
+        type: "link",
+      });
+      setSelectedFile(null);
+      setShowAddResource(false);
+      setEditingResource(null);
+      fetchResources();
+    } catch (error) {
+      console.error("Failed to update resource:", error);
+      toast({
+        title: "Error",
+        description: `Failed to update resource: ${error.message || error}`,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDeleteResource = async (resourceId: string) => {
     if (!confirm("Are you sure you want to delete this resource?")) return;
 
@@ -329,6 +504,31 @@ const AdminLearningManagement = () => {
     }
   };
 
+  const getResourceIcon = (type: string) => {
+    switch (type) {
+      case "pdf":
+        return <FileText className="w-4 h-4 text-red-500" />;
+      case "doc":
+        return <FileText className="w-4 h-4 text-blue-500" />;
+      case "video":
+        return <Video className="w-4 h-4 text-purple-500" />;
+      case "link":
+        return <Link className="w-4 h-4 text-green-500" />;
+      default:
+        return <BookOpen className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  // Load more resources
+  const loadMoreResources = () => {
+    setVisibleResources((prev) => Math.min(prev + 5, filteredResources.length));
+  };
+
+  // Load less resources
+  const loadLessResources = () => {
+    setVisibleResources((prev) => Math.max(5, prev - 5));
+  };
+
   if (loading && quizScores.length === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -340,7 +540,13 @@ const AdminLearningManagement = () => {
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6 mt-16 overflow-hidden relative">
       {/* Animated Background Shapes */}
-      <FloatingShape color="purple" size={300} top="5%" left="10%" delay={0.5} />
+      <FloatingShape
+        color="purple"
+        size={300}
+        top="5%"
+        left="10%"
+        delay={0.5}
+      />
       <FloatingShape color="pink" size={150} top="20%" left="50%" delay={1} />
       <FloatingShape color="pink" size={200} top="70%" left="70%" delay={0} />
       <FloatingShape color="purple" size={250} top="8%" left="85%" delay={0} />
@@ -368,22 +574,22 @@ const AdminLearningManagement = () => {
       />
 
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <Button
             onClick={() => navigate("/admin/dashboard")}
             variant="outline"
-            className="border-primary/50"
+            className="border-primary/50 w-full sm:w-auto"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
-          <h1 className="text-3xl font-bold text-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground text-center flex-1">
             Learning Management
           </h1>
           <Button
             onClick={fetchData}
             variant="outline"
-            className="border-primary/50"
+            className="border-primary/50 w-full sm:w-auto"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
@@ -433,327 +639,515 @@ const AdminLearningManagement = () => {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Quiz Scores Section */}
-          <Card className="bg-card/50 backdrop-blur-sm border-primary/30">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Trophy className="w-5 h-5 mr-2 text-primary" />
-                Recent Quiz Scores
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {quizScores.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">
-                    No quiz scores yet
-                  </p>
-                ) : (
-                  quizScores.map((score) => (
-                    <div
-                      key={score.id}
-                      className="p-4 bg-background/50 rounded-lg border border-primary/20"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-semibold text-foreground">
-                            {score.players?.full_name || "Unknown Player"}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {score.players?.email || "No email"}
-                          </p>
-                          {score.players?.group_name && (
-                            <Badge variant="secondary" className="mt-1">
-                              {score.players.group_name}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-primary">
-                            {score.score}/{score.total_questions}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(score.completed_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {score.quiz_title}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
+        {/* Tab Navigation */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="quiz" className="text-lg py-3">
+              <Trophy className="w-5 h-5 mr-2" />
+              Quiz Management
+            </TabsTrigger>
+            <TabsTrigger value="resources" className="text-lg py-3">
+              <BookOpen className="w-5 h-5 mr-2" />
+              Resource Management
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Resources Section */}
-          <Card className="bg-card/50 backdrop-blur-sm border-primary/30">
-            <CardHeader>
-              <div className="flex items-center justify-between">
+          {/* Quiz Management Tab */}
+          <TabsContent value="quiz">
+            <Card className="bg-card/50 backdrop-blur-sm border-primary/30">
+              <CardHeader>
                 <CardTitle className="flex items-center">
-                  <BookOpen className="w-5 h-5 mr-2 text-primary" />
-                  Learning Resources
+                  <Trophy className="w-5 h-5 mr-2 text-primary" />
+                  Quiz Scores
                 </CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => setShowAddResource(!showAddResource)}
-                    size="sm"
-                    className="bg-gradient-primary"
-                  >
-                    <PlusCircle className="w-4 h-4 mr-2" />
-                    Add Resource
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {showAddResource && (
-                <div className="mb-6 p-4 bg-background/50 rounded-lg border border-primary/20">
-                  <h3 className="font-semibold mb-4">Add New Resource</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Title *</Label>
-                      <Input
-                        value={newResource.title}
-                        onChange={(e) =>
-                          setNewResource({
-                            ...newResource,
-                            title: e.target.value,
-                          })
-                        }
-                        placeholder="Resource title"
-                      />
-                    </div>
-                    <div>
-                      <Label>Description</Label>
-                      <Textarea
-                        value={newResource.description}
-                        onChange={(e) =>
-                          setNewResource({
-                            ...newResource,
-                            description: e.target.value,
-                          })
-                        }
-                        placeholder="Brief description"
-                        rows={2}
-                      />
-                    </div>
-                    <div>
-                      <Label>Type</Label>
-                      <Select
-                        value={newResource.type}
-                        onValueChange={(
-                          value: "link" | "pdf" | "doc" | "video"
-                        ) => setNewResource({ ...newResource, type: value })}
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                  {quizScores.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">
+                      No quiz scores yet
+                    </p>
+                  ) : (
+                    quizScores.map((score) => (
+                      <div
+                        key={score.id}
+                        className="p-4 bg-background/50 rounded-lg border border-primary/20"
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="link">Link</SelectItem>
-                          <SelectItem value="pdf">PDF</SelectItem>
-                          <SelectItem value="doc">Document</SelectItem>
-                          <SelectItem value="video">Video</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Upload File or Enter URL</Label>
-                      <div className="flex gap-2 mt-2">
-                        <Input
-                          type="file"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0] || null;
-                            console.log("File selected:", file);
-                            if (file) {
-                              console.log("File details:", {
-                                name: file.name,
-                                size: file.size,
-                                type: file.type,
-                              });
-                            }
-                            setSelectedFile(file);
-                          }}
-                          className="flex-1"
-                        />
-                        <span className="text-muted-foreground self-center">
-                          OR
-                        </span>
-                        <Input
-                          value={newResource.url}
-                          onChange={(e) =>
-                            setNewResource({
-                              ...newResource,
-                              url: e.target.value,
-                            })
-                          }
-                          placeholder="https://..."
-                          className="flex-1"
-                          disabled={!!selectedFile}
-                        />
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-semibold text-foreground">
+                              {score.players?.full_name || "Unknown Player"}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {score.players?.email || "No email"}
+                            </p>
+                            {score.players?.group_name && (
+                              <Badge variant="secondary" className="mt-1">
+                                {score.players.group_name}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold text-primary">
+                              {score.score}/{score.total_questions}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(
+                                score.completed_at
+                              ).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {score.quiz_title}
+                        </p>
                       </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Resource Management Tab */}
+          <TabsContent value="resources">
+            <Card className="bg-card/50 backdrop-blur-sm border-primary/30">
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <CardTitle className="flex items-center">
+                    <BookOpen className="w-5 h-5 mr-2 text-primary" />
+                    Learning Resources
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <Dialog
+                      open={showAddResource}
+                      onOpenChange={setShowAddResource}
+                    >
+                      <DialogTrigger asChild>
+                        <Button
+                          onClick={() => {
+                            setEditingResource(null);
+                            setNewResource({
+                              title: "",
+                              description: "",
+                              url: "",
+                              type: "link",
+                            });
+                            setSelectedFile(null);
+                          }}
+                          className="bg-gradient-primary"
+                        >
+                          <PlusCircle className="w-4 h-4 mr-2" />
+                          Add Resource
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>
+                            {editingResource
+                              ? "Edit Resource"
+                              : "Add New Resource"}
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Title *</Label>
+                            <Input
+                              value={newResource.title}
+                              onChange={(e) =>
+                                setNewResource({
+                                  ...newResource,
+                                  title: e.target.value,
+                                })
+                              }
+                              placeholder="Resource title"
+                            />
+                          </div>
+                          <div>
+                            <Label>Description</Label>
+                            <Textarea
+                              value={newResource.description}
+                              onChange={(e) =>
+                                setNewResource({
+                                  ...newResource,
+                                  description: e.target.value,
+                                })
+                              }
+                              placeholder="Brief description"
+                              rows={4}
+                            />
+                          </div>
+                          <div>
+                            <Label>Type</Label>
+                            <Select
+                              value={newResource.type}
+                              onValueChange={(
+                                value: "link" | "pdf" | "doc" | "video"
+                              ) =>
+                                setNewResource({ ...newResource, type: value })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="link">Link</SelectItem>
+                                <SelectItem value="pdf">PDF</SelectItem>
+                                <SelectItem value="doc">Document</SelectItem>
+                                <SelectItem value="video">Video</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label>Upload File or Enter URL</Label>
+                            <div className="flex gap-2 mt-2">
+                              <Input
+                                type="file"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0] || null;
+                                  console.log("File selected:", file);
+                                  if (file) {
+                                    console.log("File details:", {
+                                      name: file.name,
+                                      size: file.size,
+                                      type: file.type,
+                                    });
+                                  }
+                                  setSelectedFile(file);
+                                }}
+                                className="flex-1"
+                              />
+                              <span className="text-muted-foreground self-center">
+                                OR
+                              </span>
+                              <Input
+                                value={newResource.url}
+                                onChange={(e) =>
+                                  setNewResource({
+                                    ...newResource,
+                                    url: e.target.value,
+                                  })
+                                }
+                                placeholder="https://..."
+                                className="flex-1"
+                                disabled={!!selectedFile}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={
+                                editingResource
+                                  ? handleUpdateResource
+                                  : handleAddResource
+                              }
+                              disabled={loading || uploadingFile}
+                              className="flex-1"
+                            >
+                              {uploadingFile
+                                ? "Uploading..."
+                                : editingResource
+                                ? "Update Resource"
+                                : "Add Resource"}
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                setShowAddResource(false);
+                                setEditingResource(null);
+                                setNewResource({
+                                  title: "",
+                                  description: "",
+                                  url: "",
+                                  type: "link",
+                                });
+                                setSelectedFile(null);
+                              }}
+                              variant="outline"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Search and Filter Bar */}
+                <div className="mb-6 p-4 bg-background/50 rounded-lg border border-border">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Search Input */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                      <Input
+                        placeholder="Search resources..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleAddResource}
-                        disabled={loading || uploadingFile}
-                        className="flex-1"
+
+                    {/* Type Filter */}
+                    <div>
+                      <select
+                        value={resourceTypeFilter}
+                        onChange={(e) => setResourceTypeFilter(e.target.value)}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        title="Filter resources by type"
                       >
-                        {uploadingFile ? "Uploading..." : "Add Resource"}
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          setShowAddResource(false);
-                          setNewResource({
-                            title: "",
-                            description: "",
-                            url: "",
-                            type: "link",
-                          });
-                          setSelectedFile(null);
-                        }}
-                        variant="outline"
+                        <option value="all">All Types</option>
+                        <option value="pdf">PDF</option>
+                        <option value="doc">Document</option>
+                        <option value="video">Video</option>
+                        <option value="link">Link</option>
+                      </select>
+                    </div>
+
+                    {/* Sort By */}
+                    <div>
+                      <select
+                        value={sortBy}
+                        onChange={(e) =>
+                          setSortBy(e.target.value as "date" | "title")
+                        }
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        title="Sort resources by"
                       >
-                        Cancel
-                      </Button>
+                        <option value="date">Sort by Date</option>
+                        <option value="title">Sort by Title</option>
+                      </select>
                     </div>
                   </div>
                 </div>
-              )}
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {resources.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">
-                    No resources yet
-                  </p>
-                ) : (
-                  resources.map((resource) => (
-                    <div
-                      key={resource.id}
-                      className="p-4 bg-background/50 rounded-lg border border-primary/20"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-primary" />
-                            <p className="font-semibold text-foreground">
-                              {resource.title}
-                            </p>
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {resource.description}
-                          </p>
-                          <Badge variant="secondary" className="mt-2">
-                            {resource.type.toUpperCase()}
-                          </Badge>
-                          {resource.file_name && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              File: {resource.file_name} ({Math.round((resource.file_size || 0) / 1024)} KB)
-                            </p>
-                          )}
-                          {resource.created_at && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Added: {new Date(resource.created_at).toLocaleDateString()}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex gap-2 ml-4">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={async () => {
-                              // If it's a file resource, create a download link
-                              if (resource.file_data) {
-                                try {
-                                  // Fetch the full resource data from the database to get the raw byte data
-                                  const { data, error } = await supabase
-                                    .from("learning_resources")
-                                    .select("file_data, file_name, file_type")
-                                    .eq("id", resource.id)
-                                    .single();
-                                    
-                                  if (error) throw error;
-                                  
-                                  if (data && data.file_data) {
-                                    try {
-                                      // Convert base64 to binary data
-                                      const byteCharacters = atob(data.file_data);
-                                      const byteNumbers = new Array(byteCharacters.length);
-                                      for (let i = 0; i < byteCharacters.length; i++) {
-                                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+
+                <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                  {filteredResources.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-4">
+                      No resources found
+                    </p>
+                  ) : (
+                    <>
+                      {/* Resource Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredResources
+                          .slice(0, visibleResources)
+                          .map((resource) => (
+                            <Card
+                              key={resource.id}
+                              className="bg-background/50 rounded-lg border border-border hover:border-primary/50 transition-colors cursor-pointer h-48 flex flex-col"
+                            >
+                              <CardContent className="p-4 flex flex-col h-full">
+                                <div className="flex items-start mb-2">
+                                  <div className="mr-3 mt-1">
+                                    {getResourceIcon(resource.type)}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="font-semibold text-foreground truncate">
+                                      {resource.title}
+                                    </h3>
+                                  </div>
+                                </div>
+                                <div className="mt-2 flex-grow">
+                                  <p className="text-xs text-muted-foreground line-clamp-3">
+                                    {resource.description}
+                                  </p>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between">
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    {resource.type.toUpperCase()}
+                                  </Badge>
+                                  <span className="text-xs text-foreground/50">
+                                    {new Date(
+                                      resource.created_at
+                                    ).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                <div className="flex gap-2 mt-3">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleEditResource(resource)}
+                                    className="flex-1"
+                                  >
+                                    <Edit className="w-3 h-3 mr-1" />
+                                    Edit
+                                  </Button>
+                                  {resource.type === "link" ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() =>
+                                        window.open(resource.url, "_blank")
                                       }
-                                      const byteArray = new Uint8Array(byteNumbers);
-                                      const blob = new Blob([byteArray], { 
-                                        type: data.file_type || 'application/octet-stream' 
-                                      });
-                                      
-                                      // Create download link
-                                      const url = URL.createObjectURL(blob);
-                                      const a = document.createElement('a');
-                                      a.href = url;
-                                      a.download = data.file_name || 'download';
-                                      document.body.appendChild(a);
-                                      a.click();
-                                      document.body.removeChild(a);
-                                      URL.revokeObjectURL(url);
-                                    } catch (processingError) {
-                                      console.error("Error processing file data:", processingError);
-                                      // Fallback: try to create a blob directly from the data
-                                      try {
-                                        const blob = new Blob([data.file_data], { 
-                                          type: data.file_type || 'application/octet-stream' 
-                                        });
-                                        const url = URL.createObjectURL(blob);
-                                        const a = document.createElement('a');
-                                        a.href = url;
-                                        a.download = data.file_name || 'download';
-                                        document.body.appendChild(a);
-                                        a.click();
-                                        document.body.removeChild(a);
-                                        URL.revokeObjectURL(url);
-                                      } catch (fallbackError) {
-                                        console.error("Fallback error:", fallbackError);
-                                        toast({
-                                          title: "Error",
-                                          description: "Failed to process file data. The file may be corrupted.",
-                                          variant: "destructive",
-                                        });
-                                      }
-                                    }
-                                  }
-                                } catch (error) {
-                                  console.error("Error downloading file:", error);
-                                  toast({
-                                    title: "Error",
-                                    description: "Failed to download file. There was a database error.",
-                                    variant: "destructive",
-                                  });
-                                }
-                              } else {
-                                // For URL resources, open in new tab
-                                window.open(resource.url, "_blank");
-                              }
-                            }}
-                          >
-                            <Download className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDeleteResource(resource.id)}
-                            className="border-red-500/50 hover:bg-red-500/10"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                                      className="flex-1"
+                                    >
+                                      <Link className="w-3 h-3 mr-1" />
+                                      Visit
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={async () => {
+                                        // If it's a file resource, download it
+                                        if (resource.file_name) {
+                                          try {
+                                            // Fetch the full resource data from the database to get the file data
+                                            const { data, error } =
+                                              await supabase
+                                                .from("learning_resources")
+                                                .select(
+                                                  "file_data, file_name, file_type"
+                                                )
+                                                .eq("id", resource.id)
+                                                .single();
+
+                                            if (error) throw error;
+
+                                            if (data && data.file_data) {
+                                              try {
+                                                // Convert base64 to binary data
+                                                const byteCharacters = atob(
+                                                  data.file_data
+                                                );
+                                                const byteNumbers = new Array(
+                                                  byteCharacters.length
+                                                );
+                                                for (
+                                                  let i = 0;
+                                                  i < byteCharacters.length;
+                                                  i++
+                                                ) {
+                                                  byteNumbers[i] =
+                                                    byteCharacters.charCodeAt(
+                                                      i
+                                                    );
+                                                }
+                                                const byteArray =
+                                                  new Uint8Array(byteNumbers);
+                                                const blob = new Blob(
+                                                  [byteArray],
+                                                  {
+                                                    type:
+                                                      data.file_type ||
+                                                      "application/octet-stream",
+                                                  }
+                                                );
+
+                                                // Create download link
+                                                const url =
+                                                  URL.createObjectURL(blob);
+                                                const a =
+                                                  document.createElement("a");
+                                                a.href = url;
+                                                a.download =
+                                                  data.file_name || "download";
+                                                document.body.appendChild(a);
+                                                a.click();
+                                                document.body.removeChild(a);
+                                                URL.revokeObjectURL(url);
+                                              } catch (processingError) {
+                                                console.error(
+                                                  "Error processing file data:",
+                                                  processingError
+                                                );
+                                                // Fallback: try to create a blob directly from the data
+                                                try {
+                                                  const blob = new Blob(
+                                                    [data.file_data],
+                                                    {
+                                                      type:
+                                                        data.file_type ||
+                                                        "application/octet-stream",
+                                                    }
+                                                  );
+                                                  const url =
+                                                    URL.createObjectURL(blob);
+                                                  const a =
+                                                    document.createElement("a");
+                                                  a.href = url;
+                                                  a.download =
+                                                    data.file_name ||
+                                                    "download";
+                                                  document.body.appendChild(a);
+                                                  a.click();
+                                                  document.body.removeChild(a);
+                                                  URL.revokeObjectURL(url);
+                                                } catch (fallbackError) {
+                                                  console.error(
+                                                    "Fallback error:",
+                                                    fallbackError
+                                                  );
+                                                  toast({
+                                                    title: "Error",
+                                                    description:
+                                                      "Failed to process file data. The file may be corrupted.",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              }
+                                            }
+                                          } catch (error) {
+                                            console.error(
+                                              "Error downloading file:",
+                                              error
+                                            );
+                                            toast({
+                                              title: "Error",
+                                              description:
+                                                "Failed to download file. There was a database error.",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        }
+                                      }}
+                                      className="flex-1"
+                                    >
+                                      <Download className="w-3 h-3 mr-1" />
+                                      Download
+                                    </Button>
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
                       </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+
+                      {/* Load More/Less Buttons */}
+                      <div className="flex justify-center gap-4 mt-6">
+                        {visibleResources < filteredResources.length && (
+                          <Button
+                            onClick={loadMoreResources}
+                            variant="outline"
+                            className="border-primary/50 hover:bg-primary/10"
+                          >
+                            <ChevronRight className="w-4 h-4 mr-2" />
+                            View More
+                          </Button>
+                        )}
+
+                        {visibleResources > 5 && (
+                          <Button
+                            onClick={loadLessResources}
+                            variant="outline"
+                            className="border-primary/50 hover:bg-primary/10"
+                          >
+                            <ChevronLeft className="w-4 h-4 mr-2" />
+                            View Less
+                          </Button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

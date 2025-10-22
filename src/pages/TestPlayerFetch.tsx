@@ -46,43 +46,10 @@ const TestPlayerFetch = () => {
   const applyMigrations = async () => {
     setLoading(true);
     try {
-      // Try to create the players_public view
-      const { error: viewError } = await supabase.rpc("execute_sql", {
-        sql: `
-          CREATE OR REPLACE VIEW public.players_public AS
-          SELECT 
-            id,
-            full_name,
-            email,
-            group_name,
-            score,
-            created_at,
-            updated_at,
-            cssbattle_profile_link,
-            phone,
-            badges,
-            rank,
-            verified_ofppt
-          FROM public.players;
-          
-          GRANT SELECT ON public.players_public TO anon, authenticated;
-        `,
-      });
-
-      if (viewError) {
-        // Try alternative approach - disable RLS
-        const { error: rlsError } = await supabase.rpc("execute_sql", {
-          sql: "ALTER TABLE public.players DISABLE ROW LEVEL SECURITY;",
-        });
-
-        if (rlsError) {
-          setError(rlsError.message);
-        } else {
-          setMigrationStatus("RLS disabled on players table");
-        }
-      } else {
-        setMigrationStatus("Players public view created");
-      }
+      // Note: execute_sql function doesn't exist in the database
+      // This test functionality has been disabled
+      setError("execute_sql function is not available");
+      setMigrationStatus("Test migrations disabled - execute_sql function not found");
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -93,34 +60,10 @@ const TestPlayerFetch = () => {
   const applyAdminMessagingPolicy = async () => {
     setLoading(true);
     try {
-      // Apply the admin messaging policy
-      const { error: policyError } = await supabase.rpc("execute_sql", {
-        sql: `
-          -- Allow admins to insert messages in contact_messages table
-          -- This is needed for the admin messaging feature to work properly
-
-          -- Drop existing policy if it exists
-          DROP POLICY IF EXISTS "Admins can insert messages" ON public.contact_messages;
-
-          -- Create new policy allowing admins to insert messages
-          CREATE POLICY "Admins can insert messages"
-            ON public.contact_messages FOR INSERT
-            TO authenticated
-            WITH CHECK (public.is_admin());
-
-          -- Grant INSERT permission to authenticated users (if not already granted)
-          GRANT INSERT ON public.contact_messages TO authenticated;
-        `,
-      });
-
-      if (policyError) {
-        setError(policyError.message);
-        setMigrationStatus(
-          "Failed to apply admin messaging policy: " + policyError.message
-        );
-      } else {
-        setMigrationStatus("Admin messaging policy applied successfully");
-      }
+      // Note: execute_sql function doesn't exist in the database
+      // This test functionality has been disabled
+      setError("execute_sql function is not available");
+      setMigrationStatus("Test admin messaging policy disabled - execute_sql function not found");
     } catch (err) {
       setError((err as Error).message);
       setMigrationStatus(

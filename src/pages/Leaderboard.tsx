@@ -57,7 +57,7 @@ const Leaderboard = () => {
       const { data, error } = await supabase
         .from("players")
         .select(
-          "id, full_name, score, group_name, email"
+          "id, full_name, score, group_name, email, cssbattle_profile_link, phone, created_at, video_completed"
         );
 
       if (error) throw error;
@@ -91,9 +91,12 @@ const Leaderboard = () => {
   };
 
   useEffect(() => {
+    let isMounted = true;
+    let debounceTimer: NodeJS.Timeout;
+
     fetchPlayers();
 
-    // Set up real-time subscription for player changes
+    // Set up real-time subscription with debouncing
     const channel = supabase
       .channel("leaderboard-changes")
       .on(
@@ -104,8 +107,13 @@ const Leaderboard = () => {
           table: "players",
         },
         (payload) => {
-          // Refresh the leaderboard when a player is updated
-          fetchPlayers();
+          // Debounce the fetch to prevent too many calls
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            if (isMounted) {
+              fetchPlayers();
+            }
+          }, 1000); // Wait 1 second after last update
         }
       )
       .on(
@@ -116,14 +124,21 @@ const Leaderboard = () => {
           table: "players",
         },
         (payload) => {
-          // Refresh the leaderboard when a new player is added
-          fetchPlayers();
+          // Debounce the fetch
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            if (isMounted) {
+              fetchPlayers();
+            }
+          }, 1000);
         }
       )
       .subscribe();
 
     // Clean up subscription on unmount
     return () => {
+      isMounted = false;
+      clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [groupFilter, language]);

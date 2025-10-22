@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -24,6 +24,7 @@ import {
   MessageCircle,
   Check,
   CheckCheck,
+  Reply,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/contexts/AdminContext";
@@ -44,12 +45,12 @@ interface Player {
   id: string;
   full_name: string;
   email: string;
-  group_name: string | null;
-  score: number;
-  cssbattle_profile_link: string | null;
-  phone: string | null;
-  created_at: string;
-  video_completed: boolean | null;
+  group_name?: string | null;
+  score?: number | null;
+  cssbattle_profile_link?: string | null;
+  phone?: string | null;
+  created_at?: string;
+  video_completed?: boolean | null;
 }
 
 interface MessagesPanelProps {
@@ -75,6 +76,17 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
   const [playerMessages, setPlayerMessages] = useState<ContactMessage[]>([]);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [replyToMessage, setReplyToMessage] = useState<ContactMessage | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to latest message
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [playerMessages]);
 
   // Handle window resize
   useEffect(() => {
@@ -132,14 +144,11 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
   useEffect(() => {
     if (isOpen) {
       fetchMessages();
+      fetchPlayers(); // Fetch all players separately
     }
   }, [isOpen, isAdmin, admin]);
 
-  useEffect(() => {
-    if (messages.length > 0) {
-      fetchPlayers();
-    }
-  }, [messages]);
+  // Removed the dependency on messages for fetchPlayers
 
   const fetchMessages = async () => {
     if (!isOpen) return;
@@ -203,54 +212,33 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
     }
   };
 
+  const fetchAdminContacts = async () => {
+    try {
+      // Fetch admin contacts from the admins table using the RPC function
+      const { data, error } = await supabase.rpc('get_admin_contacts');
+
+      if (error) {
+        console.error("Error fetching admin contacts:", error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Failed to fetch admin contacts:", error);
+      return [];
+    }
+  };
+
   const fetchPlayers = async () => {
     try {
-      // Get unique sender IDs from messages
-      // We need to handle both sender_id (for players) and sender_email (for admins with placeholder UUIDs)
-      const senderIds = [
-        ...new Set(
-          messages.filter((msg) => msg.sender_id).map((msg) => msg.sender_id)
-        ),
-      ];
-      const senderEmails = [
-        ...new Set(
-          messages
-            .filter((msg) => msg.sender_email && !msg.sender_id)
-            .map((msg) => msg.sender_email)
-        ),
-      ];
+      // Fetch ALL players from the database, not just those who sent messages
+      const { data, error } = await supabase
+        .from("players")
+        .select("id, full_name, email, group_name, score")
+        .order("full_name", { ascending: true });
 
-      const allPlayers = [];
-
-      // Fetch player details for sender IDs
-      if (senderIds.length > 0) {
-        const { data, error } = await supabase
-          .from("players")
-          .select("id, full_name, email")
-          .in("id", senderIds);
-
-        if (error) throw error;
-        allPlayers.push(...(data || []));
-      }
-
-      // Fetch player details for sender emails (for admins with placeholder UUIDs)
-      if (senderEmails.length > 0) {
-        const { data, error } = await supabase
-          .from("players")
-          .select("id, full_name, email")
-          .in("email", senderEmails);
-
-        if (error) throw error;
-        allPlayers.push(...(data || []));
-      }
-
-      // Remove duplicates
-      const uniquePlayers = allPlayers.filter(
-        (player, index, self) =>
-          index === self.findIndex((p) => p.id === player.id)
-      );
-
-      setPlayers(uniquePlayers);
+      if (error) throw error;
+      setPlayers(data || []);
     } catch (error) {
       console.error("Failed to fetch players:", error);
       setPlayers([]);
@@ -446,7 +434,11 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
         return;
       }
 
-      // Prepare message data
+      // Prepare message data with reply info if replying
+      const messageText = replyToMessage 
+        ? `[Replying to: "${replyToMessage.message.substring(0, 50)}..."] ${newMessage}`
+        : newMessage;
+
       // For placeholder UUIDs, we set sender_id to null but still set sender_email
       const messageData = {
         sender_id: isPlaceholderUUID ? null : admin.id,
@@ -454,7 +446,7 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
         sender_email: admin.email,
         recipient_email: selectedPlayer.email,
         subject: `Re: Message from ${selectedPlayer.full_name}`,
-        message: newMessage,
+        message: messageText,
         status: "unread", // Changed from "replied" to "unread" so players see it as unread
       };
 
@@ -488,6 +480,7 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
       } else {
         // Success
         setNewMessage("");
+        setReplyToMessage(null);
         toast({
           title: "Success",
           description: "Message sent successfully!",
@@ -725,53 +718,80 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {playerMessages.map((message) => (
-                          <div
-                            key={message.id}
-                            className={`flex ${
-                              message.sender_id === admin?.id ||
-                              message.sender_email === admin?.email
-                                ? "justify-end"
-                                : "justify-start"
-                            }`}
-                          >
+                        {playerMessages.map((message) => {
+                          // Check if this message contains a reply
+                          const replyMatch = message.message.match(/^\[Replying to: "(.*?)"\] (.*)$/);
+                          const replyText = replyMatch ? replyMatch[1] : null;
+                          const actualMessage = replyMatch ? replyMatch[2] : message.message;
+                          
+                          return (
                             <div
-                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                              key={message.id}
+                              className={`flex ${
                                 message.sender_id === admin?.id ||
                                 message.sender_email === admin?.email
-                                  ? "bg-battle-purple text-white rounded-br-none"
-                                  : "bg-muted text-foreground rounded-bl-none"
+                                  ? "justify-end"
+                                  : "justify-start"
                               }`}
                             >
-                              <p className="text-sm">{message.message}</p>
                               <div
-                                className={`text-xs mt-1 flex items-center ${
+                                className={`group max-w-xs lg:max-w-md px-4 py-2 rounded-lg relative ${
                                   message.sender_id === admin?.id ||
                                   message.sender_email === admin?.email
-                                    ? "text-battle-purple-foreground/80 justify-end"
-                                    : "text-muted-foreground justify-start"
+                                    ? "bg-battle-purple text-white rounded-br-none"
+                                    : "bg-muted text-foreground rounded-bl-none"
                                 }`}
                               >
-                                {message.sender_id === admin?.id ||
-                                message.sender_email === admin?.email ? (
-                                  message.status === "replied" ? (
-                                    <CheckCheck className="w-3 h-3 mr-1 text-blue-500" />
-                                  ) : message.status === "read" ? (
-                                    <CheckCheck className="w-3 h-3 mr-1 text-blue-500" />
-                                  ) : (
-                                    <Check className="w-3 h-3 mr-1 text-blue-500" />
-                                  )
-                                ) : null}
-                                {new Date(
-                                  message.created_at
-                                ).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
+                                {/* Reply preview if this is a reply */}
+                                {replyText && (
+                                  <div className="text-xs opacity-70 mb-2 pb-2 border-b border-white/20">
+                                    <Reply className="w-3 h-3 inline mr-1" />
+                                    {replyText}
+                                  </div>
+                                )}
+                                
+                                <p className="text-sm">{actualMessage}</p>
+                                
+                                <div
+                                  className={`text-xs mt-1 flex items-center justify-between ${
+                                    message.sender_id === admin?.id ||
+                                    message.sender_email === admin?.email
+                                      ? "text-battle-purple-foreground/80"
+                                      : "text-muted-foreground"
+                                  }`}
+                                >
+                                  <div className="flex items-center">
+                                    {message.sender_id === admin?.id ||
+                                    message.sender_email === admin?.email ? (
+                                      message.status === "read" ? (
+                                        <CheckCheck className="w-3 h-3 mr-1 text-blue-400" />
+                                      ) : (
+                                        <Check className="w-3 h-3 mr-1 text-white/60" />
+                                      )
+                                    ) : null}
+                                    {new Date(
+                                      message.created_at
+                                    ).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </div>
+                                  
+                                  {/* Reply button */}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => setReplyToMessage(message)}
+                                  >
+                                    <Reply className="w-3 h-3" />
+                                  </Button>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
+                        <div ref={messagesEndRef} />
                       </div>
                     )}
                   </div>
@@ -793,6 +813,25 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
                       marginRight: isMobile && isInputFocused ? "1rem" : "",
                     }}
                   >
+                    {/* Reply preview */}
+                    {replyToMessage && (
+                      <div className="mb-2 p-2 bg-muted rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Reply className="w-4 h-4 text-primary" />
+                          <span className="text-muted-foreground">Replying to:</span>
+                          <span className="truncate max-w-[200px]">{replyToMessage.message}</span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setReplyToMessage(null)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                    
                     <div className="flex gap-2">
                       <Input
                         value={newMessage}

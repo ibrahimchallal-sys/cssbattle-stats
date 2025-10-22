@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   CheckCheck,
   User,
   RefreshCw,
+  Reply,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +67,17 @@ const PlayerMessagesPanel = ({
   const [adminMessages, setAdminMessages] = useState<ContactMessage[]>([]);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [replyToMessage, setReplyToMessage] = useState<ContactMessage | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to latest message
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [adminMessages]);
 
   // Handle window resize
   useEffect(() => {
@@ -314,18 +326,24 @@ const PlayerMessagesPanel = ({
     }
 
     try {
+      // Prepare message with reply info if replying
+      const messageText = replyToMessage 
+        ? `[Replying to: "${replyToMessage.message.substring(0, 50)}..."] ${newMessage}`
+        : newMessage;
+
       const { error } = await supabase.from("contact_messages").insert({
         sender_email: playerEmail,
         sender_name: "Player",
         recipient_email: selectedAdmin.email,
         subject: "Message from Player",
-        message: newMessage,
+        message: messageText,
         status: "unread",
       });
 
       if (error) throw error;
 
       setNewMessage("");
+      setReplyToMessage(null);
       toast({
         title: "Success",
         description: "Message sent successfully!",
@@ -404,31 +422,56 @@ const PlayerMessagesPanel = ({
                   </div>
                 ) : (
                   <div className="divide-y divide-battle-purple/10">
-                    {admins.map((admin) => (
-                      <div
-                        key={admin.email}
-                        className={`p-4 cursor-pointer hover:bg-battle-purple/5 transition-colors ${
-                          selectedAdmin?.email === admin.email
-                            ? "bg-battle-purple/10"
-                            : ""
-                        }`}
-                        onClick={() => handleSelectAdmin(admin)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center">
-                            <User className="w-5 h-5 text-white" />
+                    {admins.map((admin) => {
+                      // Get messages for this admin
+                      const adminMsgs = messages.filter(
+                        (msg) =>
+                          (msg.sender_email === admin.email && msg.recipient_email === playerEmail) ||
+                          (msg.sender_email === playerEmail && msg.recipient_email === admin.email)
+                      );
+                      const unreadCount = adminMsgs.filter(
+                        (msg) => msg.status === "unread" && msg.recipient_email === playerEmail
+                      ).length;
+                      const lastMessage = adminMsgs.length > 0 ? adminMsgs[adminMsgs.length - 1] : null;
+
+                      return (
+                        <div
+                          key={admin.email}
+                          className={`p-4 cursor-pointer hover:bg-battle-purple/5 transition-colors ${
+                            selectedAdmin?.email === admin.email
+                              ? "bg-battle-purple/10"
+                              : ""
+                          }`}
+                          onClick={() => handleSelectAdmin(admin)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center">
+                                <User className="w-5 h-5 text-white" />
+                              </div>
+                              <div>
+                                <h3 className="font-medium text-foreground">
+                                  {admin.name}
+                                </h3>
+                                <p className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                  {admin.email}
+                                </p>
+                              </div>
+                            </div>
+                            {unreadCount > 0 && (
+                              <Badge variant="default" className="rounded-full">
+                                {unreadCount}
+                              </Badge>
+                            )}
                           </div>
-                          <div>
-                            <h3 className="font-medium text-foreground">
-                              {admin.name}
-                            </h3>
-                            <p className="text-xs text-muted-foreground truncate max-w-[150px]">
-                              {admin.email}
+                          {lastMessage && (
+                            <p className="text-xs text-muted-foreground mt-2 truncate">
+                              {lastMessage.message}
                             </p>
-                          </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -502,49 +545,76 @@ const PlayerMessagesPanel = ({
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {adminMessages.map((message) => (
-                          <div
-                            key={`${message.id}-${message.created_at}`}
-                            className={`flex ${
-                              message.sender_email === playerEmail
-                                ? "justify-end"
-                                : "justify-start"
-                            }`}
-                          >
+                        {adminMessages.map((message) => {
+                          // Check if this message contains a reply
+                          const replyMatch = message.message.match(/^\[Replying to: "(.*?)"\] (.*)$/);
+                          const replyText = replyMatch ? replyMatch[1] : null;
+                          const actualMessage = replyMatch ? replyMatch[2] : message.message;
+                          
+                          return (
                             <div
-                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                              key={`${message.id}-${message.created_at}`}
+                              className={`flex ${
                                 message.sender_email === playerEmail
-                                  ? "bg-battle-purple text-white rounded-br-none"
-                                  : "bg-muted text-foreground rounded-bl-none"
+                                  ? "justify-end"
+                                  : "justify-start"
                               }`}
                             >
-                              <p className="text-sm">{message.message}</p>
                               <div
-                                className={`text-xs mt-1 flex items-center ${
+                                className={`group max-w-xs lg:max-w-md px-4 py-2 rounded-lg relative ${
                                   message.sender_email === playerEmail
-                                    ? "text-battle-purple-foreground/80 justify-end"
-                                    : "text-muted-foreground justify-start"
+                                    ? "bg-battle-purple text-white rounded-br-none"
+                                    : "bg-muted text-foreground rounded-bl-none"
                                 }`}
                               >
-                                {message.sender_email === playerEmail ? (
-                                  message.status === "replied" ? (
-                                    <CheckCheck className="w-3 h-33 mr-1 text-blue-500" />
-                                  ) : message.status === "read" ? (
-                                    <CheckCheck className="w-3 h-33 mr-1 text-blue-500" />
-                                  ) : (
-                                    <Check className="w-3 h-3 mr-1 text-blue-500" />
-                                  )
-                                ) : null}
-                                {new Date(
-                                  message.created_at
-                                ).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
+                                {/* Reply preview if this is a reply */}
+                                {replyText && (
+                                  <div className="text-xs opacity-70 mb-2 pb-2 border-b border-white/20">
+                                    <Reply className="w-3 h-3 inline mr-1" />
+                                    {replyText}
+                                  </div>
+                                )}
+                                
+                                <p className="text-sm">{actualMessage}</p>
+                                
+                                <div
+                                  className={`text-xs mt-1 flex items-center justify-between ${
+                                    message.sender_email === playerEmail
+                                      ? "text-battle-purple-foreground/80"
+                                      : "text-muted-foreground"
+                                  }`}
+                                >
+                                  <div className="flex items-center">
+                                    {message.sender_email === playerEmail ? (
+                                      message.status === "read" ? (
+                                        <CheckCheck className="w-3 h-3 mr-1 text-blue-400" />
+                                      ) : (
+                                        <Check className="w-3 h-3 mr-1 text-white/60" />
+                                      )
+                                    ) : null}
+                                    {new Date(
+                                      message.created_at
+                                    ).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </div>
+                                  
+                                  {/* Reply button */}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => setReplyToMessage(message)}
+                                  >
+                                    <Reply className="w-3 h-3" />
+                                  </Button>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
+                        <div ref={messagesEndRef} />
                       </div>
                     )}
                   </div>
@@ -566,6 +636,25 @@ const PlayerMessagesPanel = ({
                       marginRight: isMobile && isInputFocused ? "1rem" : "",
                     }}
                   >
+                    {/* Reply preview */}
+                    {replyToMessage && (
+                      <div className="mb-2 p-2 bg-muted rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Reply className="w-4 h-4 text-primary" />
+                          <span className="text-muted-foreground">Replying to:</span>
+                          <span className="truncate max-w-[200px]">{replyToMessage.message}</span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setReplyToMessage(null)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                    
                     <div className="flex gap-2">
                       <Input
                         value={newMessage}

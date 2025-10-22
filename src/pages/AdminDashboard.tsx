@@ -45,6 +45,7 @@ import { GROUP_OPTIONS } from "@/constants/groups";
 import { useAdmin } from "@/contexts/AdminContext";
 import ImportPlayersModal from "@/components/ImportPlayersModal";
 import MessagesPanel from "@/components/MessagesPanel";
+import { PlayerModal, PlayerFormData } from "@/components/PlayerModal";
 
 interface Player {
   id: string;
@@ -74,14 +75,8 @@ const AdminDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
   const [adminEmail, setAdminEmail] = useState<string>("");
-  const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({
-    full_name: "",
-    email: "",
-    cssbattle_profile_link: "",
-    phone: "",
-    group_name: "",
-  });
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
 
   // Advanced filter states
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -200,25 +195,8 @@ const AdminDashboard = () => {
   };
 
   const handleEditPlayer = (player: Player) => {
-    setEditingPlayer(player.id);
-    setEditForm({
-      full_name: player.full_name,
-      email: player.email,
-      cssbattle_profile_link: player.cssbattle_profile_link || "",
-      phone: player.phone || "",
-      group_name: player.group_name || "",
-    });
-  };
-
-  const handleCancelEdit = () => {
-    setEditingPlayer(null);
-    setEditForm({
-      full_name: "",
-      email: "",
-      cssbattle_profile_link: "",
-      phone: "",
-      group_name: "",
-    });
+    setEditingPlayer(player);
+    setIsEditModalOpen(true);
   };
 
   const handleSendPasswordReset = async (player: Player) => {
@@ -254,96 +232,41 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleSavePlayer = async (playerId: string) => {
+  const handleSavePlayer = async (playerData: PlayerFormData) => {
     try {
-      console.log("AdminDashboard - Updating player with ID:", playerId);
-      console.log("AdminDashboard - Update data:", {
-        full_name: editForm.full_name,
-        email: editForm.email,
-        cssbattle_profile_link: editForm.cssbattle_profile_link || null,
-        phone: editForm.phone || null,
-        group_name: editForm.group_name || null,
-      });
+      if (!editingPlayer) return;
 
-      // First, let's check if the player exists
-      const { data: playerData, error: playerError } = await supabase
+      const updateData: any = {
+        full_name: playerData.full_name,
+        email: playerData.email,
+        cssbattle_profile_link: playerData.css_link || null,
+        phone: playerData.phone || null,
+        group_name: playerData.group_name || null,
+        score: playerData.score,
+      };
+
+      // Only include password if it was provided
+      if (playerData.password) {
+        // Send password reset email
+        await supabase.auth.resetPasswordForEmail(playerData.email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+      }
+
+      const { error: updateError } = await supabase
         .from("players")
-        .select("id, full_name, email")
-        .eq("id", playerId);
-
-      console.log("AdminDashboard - Player fetch result:", playerData);
-      console.log("AdminDashboard - Player fetch error:", playerError);
-
-      if (playerError) {
-        throw new Error(`Database error: ${playerError.message}`);
-      }
-
-      if (!playerData || playerData.length === 0) {
-        throw new Error(`Player not found in database with ID: ${playerId}`);
-      }
-
-      // Check if CSS Battle link is already used by another player
-      if (editForm.cssbattle_profile_link) {
-        const { data: existingPlayers, error: checkError } = await supabase
-          .from("players")
-          .select("id, full_name")
-          .neq("id", playerId) // Exclude current player
-          .eq("cssbattle_profile_link", editForm.cssbattle_profile_link);
-
-        if (checkError) {
-          throw new Error(`Database error: ${checkError.message}`);
-        }
-
-        if (existingPlayers && existingPlayers.length > 0) {
-          throw new Error(
-            "CSS Battle link is already in use by another player"
-          );
-        }
-      }
-
-      // Now try to update
-      const { data: updateData, error: updateError } = await supabase
-        .from("players")
-        .update({
-          full_name: editForm.full_name,
-          email: editForm.email,
-          cssbattle_profile_link: editForm.cssbattle_profile_link || null,
-          phone: editForm.phone || null,
-          group_name: editForm.group_name || null,
-        })
-        .eq("id", playerId);
-
-      console.log("AdminDashboard - Update result:", updateData);
-      console.log("AdminDashboard - Update error:", updateError);
+        .update(updateData)
+        .eq("id", editingPlayer.id);
 
       if (updateError) {
-        // Log detailed error information
-        console.error("AdminDashboard - Detailed update error:", {
-          message: updateError.message,
-          code: updateError.code,
-          details: updateError.details,
-          hint: updateError.hint,
-        });
-
-        // Check if it's a permission error
-        if (updateError.code === "42501") {
-          throw new Error(
-            "Permission denied. You may not have the required permissions to update this record."
-          );
-        }
-
-        throw new Error(`Failed to update player: ${updateError.message}`);
+        throw updateError;
       }
 
       setSuccess("Player updated successfully!");
-      setEditingPlayer(null);
-      fetchPlayers(); // Refresh the list
-
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(null), 3000);
+      fetchPlayers();
     } catch (err) {
-      console.error("AdminDashboard - Update error:", err);
-      setError(`Failed to update player: ${(err as Error).message}`);
+      console.error("Failed to update player:", err);
+      throw err;
     }
   };
 
@@ -1081,16 +1004,6 @@ const AdminDashboard = () => {
               </p>
             )}
           </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="border-red-500/50 hover:bg-red-500/10"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
-          </div>
         </div>
 
         {/* Stats Cards */}
@@ -1404,133 +1317,6 @@ const AdminDashboard = () => {
             </table>
           </div>
 
-          {/* Edit Player Form */}
-          {editingPlayer && (
-            <div className="p-6 mt-4 border-t border-battle-purple/30">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-foreground">
-                  Edit Player
-                </h3>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleCancelEdit}
-                  className="text-foreground hover:bg-battle-purple/10 hover:text-foreground"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="full_name" className="text-foreground">
-                    Full Name *
-                  </Label>
-                  <Input
-                    id="full_name"
-                    value={editForm.full_name}
-                    onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
-                        full_name: e.target.value,
-                      })
-                    }
-                    className="bg-background/50 border-battle-purple/30"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-foreground">
-                    Email *
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={editForm.email}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, email: e.target.value })
-                    }
-                    className="bg-background/50 border-battle-purple/30"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="group_name" className="text-foreground">
-                    Group *
-                  </Label>
-                  <Select
-                    value={editForm.group_name}
-                    onValueChange={(value) =>
-                      setEditForm({ ...editForm, group_name: value })
-                    }
-                  >
-                    <SelectTrigger className="bg-background/50 border-battle-purple/30">
-                      <SelectValue placeholder="Select group" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {GROUP_OPTIONS.map((g) => (
-                        <SelectItem key={g.value} value={g.value}>
-                          {g.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="cssbattle_profile_link"
-                    className="text-foreground"
-                  >
-                    CSSBattle Profile Link
-                  </Label>
-                  <Input
-                    id="cssbattle_profile_link"
-                    value={editForm.cssbattle_profile_link}
-                    onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
-                        cssbattle_profile_link: e.target.value,
-                      })
-                    }
-                    className="bg-background/50 border-battle-purple/30"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-foreground">
-                    Phone
-                  </Label>
-                  <Input
-                    id="phone"
-                    value={editForm.phone}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, phone: e.target.value })
-                    }
-                    className="bg-background/50 border-battle-purple/30"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-6">
-                <Button
-                  onClick={handleCancelEdit}
-                  variant="outline"
-                  className="flex-1 border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => handleSavePlayer(editingPlayer)}
-                  className="flex-1 bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
-                >
-                  Save Changes
-                </Button>
-              </div>
-            </div>
-          )}
         </Card>
 
         {/* Delete Confirmation Modal */}
@@ -1852,6 +1638,26 @@ const AdminDashboard = () => {
           isOpen={isImportModalOpen}
           onClose={() => setIsImportModalOpen(false)}
           onImportComplete={fetchPlayers}
+        />
+
+        {/* Edit Player Modal */}
+        <PlayerModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingPlayer(null);
+          }}
+          onSave={handleSavePlayer}
+          player={editingPlayer ? {
+            id: editingPlayer.id,
+            full_name: editingPlayer.full_name,
+            email: editingPlayer.email,
+            phone: editingPlayer.phone || "",
+            css_link: editingPlayer.cssbattle_profile_link || "",
+            group_name: editingPlayer.group_name || "",
+            score: editingPlayer.score || 0,
+          } : null}
+          mode="edit"
         />
       </div>
     </div>

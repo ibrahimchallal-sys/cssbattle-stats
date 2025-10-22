@@ -138,65 +138,74 @@ const ImportPlayersModal = ({
         return;
       }
 
-      // Import players
+      // Import players in batches to avoid overwhelming the system
       let successCount = 0;
       const importErrors: string[] = [];
+      const BATCH_SIZE = 10; // Process 10 players at a time
 
-      for (const player of players) {
-        try {
-          // Generate a random password for the player
-          const password = Math.random().toString(36).slice(-8);
+      for (let i = 0; i < players.length; i += BATCH_SIZE) {
+        const batch = players.slice(i, i + BATCH_SIZE);
+        
+        await Promise.all(
+          batch.map(async (player) => {
+            try {
+              // Generate a random password for the player
+              const password = Math.random().toString(36).slice(-8);
 
-          // Create user in Supabase Auth
-          const { data: authData, error: authError } =
-            await supabase.auth.signUp({
-              email: player.email,
-              password: password,
-              options: {
-                data: {
-                  full_name: player.full_name,
-                },
-                emailRedirectTo: `${window.location.origin}/login`,
-              },
-            });
-
-          if (authError) {
-            importErrors.push(
-              `Row ${players.indexOf(player) + 2}: ${authError.message}`
-            );
-            continue;
-          }
-
-          if (authData.user) {
-            // Insert user data into players table
-            const { error: insertError } = await supabase
-              .from("players")
-              .insert([
-                {
-                  id: authData.user.id,
-                  full_name: player.full_name,
+              // Create user in Supabase Auth
+              const { data: authData, error: authError } =
+                await supabase.auth.signUp({
                   email: player.email,
-                  group_name: player.group_name,
-                  phone: player.phone || null,
-                  cssbattle_profile_link: player.cssbattle_profile_link || null,
-                  score: 0,
-                },
-              ]);
+                  password: password,
+                  options: {
+                    data: {
+                      full_name: player.full_name,
+                    },
+                    emailRedirectTo: `${window.location.origin}/login`,
+                  },
+                });
 
-            if (insertError) {
+              if (authError) {
+                importErrors.push(
+                  `Row ${players.indexOf(player) + 2}: ${authError.message}`
+                );
+                return;
+              }
+
+              if (authData.user) {
+                // Insert user data into players table
+                const { error: insertError } = await supabase
+                  .from("players")
+                  .insert([
+                    {
+                      id: authData.user.id,
+                      full_name: player.full_name,
+                      email: player.email,
+                      group_name: player.group_name,
+                      phone: player.phone || null,
+                      cssbattle_profile_link: player.cssbattle_profile_link || null,
+                      verified_ofppt: player.verified_ofppt || false,
+                      score: 0,
+                    },
+                  ]);
+
+                if (insertError) {
+                  importErrors.push(
+                    `Row ${players.indexOf(player) + 2}: ${insertError.message}`
+                  );
+                  return;
+                }
+
+                successCount++;
+                setProcessedPlayers(successCount);
+              }
+            } catch (error) {
               importErrors.push(
-                `Row ${players.indexOf(player) + 2}: ${insertError.message}`
+                `Row ${players.indexOf(player) + 2}: ${(error as Error).message}`
               );
-              continue;
             }
-
-            successCount++;
-          }
-        } catch (error) {
-          importErrors.push(
-            `Row ${players.indexOf(player) + 2}: ${(error as Error).message}`
-          );
-        }
+          })
+        );
       }
 
       setProcessedPlayers(successCount);

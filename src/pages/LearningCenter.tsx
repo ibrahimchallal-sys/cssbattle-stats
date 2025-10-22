@@ -8,6 +8,11 @@ import {
   Play,
   Pause,
   RotateCcw,
+<<<<<<< HEAD
+=======
+  FileText,
+  BookOpen,
+>>>>>>> 20b0275661b62e40097cda4673e2063a0c94d018
   Trophy,
   Lightbulb,
   CheckCircle,
@@ -16,6 +21,16 @@ import {
   Maximize,
   Minimize,
   Lock,
+  Search,
+  Filter,
+  Calendar,
+  File,
+  Video,
+  Link,
+  ChevronDown,
+  X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +38,13 @@ import { useAdmin } from "@/contexts/AdminContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import usePreventRightClick from "@/hooks/usePreventRightClick";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface QuizQuestion {
   id: number;
@@ -32,6 +54,22 @@ interface QuizQuestion {
   explanation: string;
 }
 
+<<<<<<< HEAD
+=======
+interface LearningResource {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  type: "pdf" | "doc" | "link" | "video";
+  file_data?: string;
+  file_name?: string;
+  file_size?: number;
+  file_type?: string;
+  created_at?: string;
+}
+
+>>>>>>> 20b0275661b62e40097cda4673e2063a0c94d018
 const LearningCenter = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -60,6 +98,20 @@ const LearningCenter = () => {
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [scoreSaved, setScoreSaved] = useState(false);
   const [quizCompletionChecked, setQuizCompletionChecked] = useState(false);
+
+  // Resource state
+  const [resources, setResources] = useState<LearningResource[]>([]);
+  const [filteredResources, setFilteredResources] = useState<
+    LearningResource[]
+  >([]);
+  const [loadingResources, setLoadingResources] = useState(true);
+  const [visibleResources, setVisibleResources] = useState(3);
+  const [selectedResource, setSelectedResource] =
+    useState<LearningResource | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [resourceTypeFilter, setResourceTypeFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"date" | "title">("date");
+  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
 
   // Check if user has already completed the quiz
   useEffect(() => {
@@ -127,7 +179,7 @@ const LearningCenter = () => {
     };
 
     checkQuizCompletion();
-  }, [user]); // Remove quizCompletionChecked from dependencies
+  }, [user, language]); // Add language as dependency
 
   // Save quiz score when completed
   useEffect(() => {
@@ -219,6 +271,43 @@ const LearningCenter = () => {
     }
   }, [quizCompleted, scoreSaved, user]);
 
+<<<<<<< HEAD
+=======
+  // Fetch resources from database
+  useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("learning_resources")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        const resourcesData = (data || []).map((r) => ({
+          id: r.id,
+          title: r.title,
+          description: r.description || "",
+          url: r.url,
+          type: r.type as "pdf" | "doc" | "link" | "video",
+          file_data: r.file_data,
+          file_name: r.file_name,
+          file_size: r.file_size,
+          file_type: r.file_type,
+          created_at: r.created_at,
+        }));
+        setResources(resourcesData);
+        setFilteredResources(resourcesData);
+      } catch (error) {
+        console.error("Failed to fetch resources:", error);
+      } finally {
+        setLoadingResources(false);
+      }
+    };
+
+    fetchResources();
+  }, []);
+
+>>>>>>> 20b0275661b62e40097cda4673e2063a0c94d018
   // Sample quiz questions - 5 basic questions + 1 advanced question
   const quizQuestions: QuizQuestion[] = [
     {
@@ -613,6 +702,24 @@ const LearningCenter = () => {
     }, 2000);
   };
 
+<<<<<<< HEAD
+=======
+  const getResourceIcon = (type: string) => {
+    switch (type) {
+      case "pdf":
+        return <FileText className="w-5 h-5 text-red-500" />;
+      case "doc":
+        return <FileText className="w-5 h-5 text-blue-500" />;
+      case "video":
+        return <Play className="w-5 h-5 text-purple-500" />;
+      case "link":
+        return <ExternalLink className="w-5 h-5 text-green-500" />;
+      default:
+        return <BookOpen className="w-5 h-5 text-gray-500" />;
+    }
+  };
+
+>>>>>>> 20b0275661b62e40097cda4673e2063a0c94d018
   // Check if user has already completed the video
   useEffect(() => {
     // Reset the check flag when user changes
@@ -667,7 +774,7 @@ const LearningCenter = () => {
     };
 
     checkVideoCompletion();
-  }, [user]); // Remove videoCompletionChecked from dependencies
+  }, [user, language]); // Add language as dependency
 
   // Save video completion status
   const saveVideoCompletion = async () => {
@@ -699,10 +806,68 @@ const LearningCenter = () => {
     }
   };
 
+  // Filter resources based on search term and type filter
+  useEffect(() => {
+    let result = [...resources];
+
+    // Apply search filter
+    if (searchTerm) {
+      result = result.filter(
+        (resource) =>
+          resource.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          resource.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply type filter
+    if (resourceTypeFilter !== "all") {
+      result = result.filter(
+        (resource) => resource.type === resourceTypeFilter
+      );
+    }
+
+    // Apply sorting
+    result.sort((a, b) => {
+      if (sortBy === "date") {
+        return (
+          new Date(b.created_at || "").getTime() -
+          new Date(a.created_at || "").getTime()
+        );
+      } else {
+        return a.title.localeCompare(b.title);
+      }
+    });
+
+    setFilteredResources(result);
+    setVisibleResources(3); // Reset to show only 3 resources when filters change
+  }, [resources, searchTerm, resourceTypeFilter, sortBy]);
+
+  // Load more resources
+  const loadMoreResources = () => {
+    setVisibleResources((prev) => Math.min(prev + 3, filteredResources.length));
+  };
+
+  // Load less resources
+  const loadLessResources = () => {
+    setVisibleResources((prev) => Math.max(3, prev - 3));
+  };
+
+  // Open resource detail modal
+  const openResourceModal = (resource: LearningResource) => {
+    setSelectedResource(resource);
+    setIsResourceModalOpen(true);
+  };
+
+  // Close resource detail modal
+  const closeResourceModal = () => {
+    setIsResourceModalOpen(false);
+    setSelectedResource(null);
+  };
+
   return (
     <div className="min-h-screen bg-background overflow-hidden relative">
       <Navbar />
-      
+
       {/* Animated Background Shapes */}
       <FloatingShape color="purple" size={200} top="10%" left="5%" delay={0} />
       <FloatingShape
@@ -739,9 +904,14 @@ const LearningCenter = () => {
             </p>
           </div>
 
+<<<<<<< HEAD
           <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
+=======
+          {/* Library-style layout with tabs for different sections */}
+          <div className="grid gap-8 grid-cols-1 lg:grid-cols-3">
+>>>>>>> 20b0275661b62e40097cda4673e2063a0c94d018
             {/* Video Tutorial Section */}
-            <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30">
+            <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 lg:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Play className="w-5 h-5 mr-2 text-battle-purple" />
@@ -929,13 +1099,14 @@ const LearningCenter = () => {
                     <div
                       className="bg-battle-purple h-1.5 rounded-full"
                       style={{
-                        width: videoRef.current
-                          ? `${
-                              (videoRef.current.currentTime /
-                                (videoRef.current.duration || 1)) *
-                              100
-                            }%`
-                          : "0%",
+                        width:
+                          videoRef.current && videoRef.current.duration
+                            ? `${
+                                (videoRef.current.currentTime /
+                                  videoRef.current.duration) *
+                                100
+                              }%`
+                            : "0%",
                       }}
                     ></div>
                   </div>
@@ -1173,8 +1344,323 @@ const LearningCenter = () => {
                 </div>
               </Card>
             )}
+<<<<<<< HEAD
+=======
+
+            {/* Learning Resources Section */}
+            <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 lg:col-span-3">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <BookOpen className="w-5 h-5 mr-2 text-battle-purple" />
+                  {t("learning.resources.title")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {/* Search and Filter Bar */}
+                <div className="mb-6 p-4 bg-background/50 rounded-lg border border-border">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Search Input */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                      <Input
+                        placeholder="Search resources..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+
+                    {/* Type Filter */}
+                    <div>
+                      <select
+                        value={resourceTypeFilter}
+                        onChange={(e) => setResourceTypeFilter(e.target.value)}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        title="Filter resources by type"
+                      >
+                        <option value="all">All Types</option>
+                        <option value="pdf">PDF</option>
+                        <option value="doc">Document</option>
+                        <option value="video">Video</option>
+                        <option value="link">Link</option>
+                      </select>
+                    </div>
+
+                    {/* Sort By */}
+                    <div>
+                      <select
+                        value={sortBy}
+                        onChange={(e) =>
+                          setSortBy(e.target.value as "date" | "title")
+                        }
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        title="Sort resources by"
+                      >
+                        <option value="date">Sort by Date</option>
+                        <option value="title">Sort by Title</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {loadingResources ? (
+                  <div className="flex justify-center items-center h-32">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-battle-purple"></div>
+                  </div>
+                ) : filteredResources.length === 0 ? (
+                  <div className="text-center py-8">
+                    <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">
+                      {t("learning.resources.none")}
+                    </h3>
+                    <p className="text-muted-foreground">
+                      {t("learning.resources.noneDesc")}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Resource Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredResources
+                        .slice(0, visibleResources)
+                        .map((resource) => (
+                          <Card
+                            key={resource.id}
+                            className="bg-background/50 rounded-lg border border-border hover:border-battle-purple/50 transition-colors cursor-pointer h-48 flex flex-col"
+                            onClick={() => openResourceModal(resource)}
+                          >
+                            <CardContent className="p-4 flex flex-col h-full">
+                              <div className="flex items-start mb-2">
+                                <div className="mr-3 mt-1">
+                                  {getResourceIcon(resource.type)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-semibold text-foreground truncate">
+                                    {resource.title}
+                                  </h3>
+                                </div>
+                              </div>
+                              <div className="mt-2 flex-grow">
+                                <p className="text-xs text-muted-foreground line-clamp-3">
+                                  {resource.description}
+                                </p>
+                              </div>
+                              <div className="mt-3 flex items-center justify-between">
+                                <Badge variant="secondary" className="text-xs">
+                                  {resource.type.toUpperCase()}
+                                </Badge>
+                                <span className="text-xs text-foreground/50">
+                                  {resource.created_at
+                                    ? new Date(
+                                        resource.created_at
+                                      ).toLocaleDateString()
+                                    : "N/A"}
+                                </span>
+                              </div>
+                              <Button
+                                variant="link"
+                                size="sm"
+                                className="mt-3 p-0 h-auto text-battle-purple hover:text-battle-pink w-full justify-start"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openResourceModal(resource);
+                                }}
+                              >
+                                View Details
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        ))}
+                    </div>
+
+                    {/* Load More/Less Buttons */}
+                    <div className="flex justify-center gap-4 mt-6">
+                      {visibleResources < filteredResources.length && (
+                        <Button
+                          onClick={loadMoreResources}
+                          variant="outline"
+                          className="border-battle-purple/50 hover:bg-battle-purple/10"
+                        >
+                          <ChevronRight className="w-4 h-4 mr-2" />
+                          View 3 More
+                        </Button>
+                      )}
+
+                      {visibleResources > 3 && (
+                        <Button
+                          onClick={loadLessResources}
+                          variant="outline"
+                          className="border-battle-purple/50 hover:bg-battle-purple/10"
+                        >
+                          <ChevronLeft className="w-4 h-4 mr-2" />
+                          View Less
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+>>>>>>> 20b0275661b62e40097cda4673e2063a0c94d018
           </div>
         </div>
+
+        {/* Resource Detail Modal */}
+        <Dialog
+          open={isResourceModalOpen}
+          onOpenChange={setIsResourceModalOpen}
+        >
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {selectedResource && getResourceIcon(selectedResource.type)}
+                {selectedResource?.title}
+              </DialogTitle>
+            </DialogHeader>
+
+            {selectedResource && (
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary">
+                    {selectedResource.type.toUpperCase()}
+                  </Badge>
+                  <Badge variant="outline">
+                    Added:{" "}
+                    {selectedResource.created_at
+                      ? new Date(
+                          selectedResource.created_at
+                        ).toLocaleDateString()
+                      : "N/A"}
+                  </Badge>
+                </div>
+
+                <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                  {selectedResource.description}
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    onClick={async () => {
+                      // If it's a file stored in the database, create a download link
+                      if (selectedResource.file_data) {
+                        try {
+                          // Fetch the full resource data from the database to get the raw byte data
+                          const { data, error } = await supabase
+                            .from("learning_resources")
+                            .select("file_data, file_name, file_type")
+                            .eq("id", selectedResource.id)
+                            .single();
+
+                          if (error) throw error;
+
+                          if (data && data.file_data) {
+                            try {
+                              // First, try to determine if the data is base64 encoded or raw binary
+                              let blob;
+
+                              // Check if it's a valid base64 string
+                              const isBase64 =
+                                /^[A-Za-z0-9+/]*={0,2}$/.test(data.file_data) &&
+                                data.file_data.length % 4 === 0;
+
+                              if (isBase64) {
+                                // Convert base64 to binary data
+                                const byteCharacters = atob(data.file_data);
+                                const byteNumbers = new Array(
+                                  byteCharacters.length
+                                );
+                                for (
+                                  let i = 0;
+                                  i < byteCharacters.length;
+                                  i++
+                                ) {
+                                  byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                }
+                                const byteArray = new Uint8Array(byteNumbers);
+                                blob = new Blob([byteArray], {
+                                  type:
+                                    data.file_type ||
+                                    "application/octet-stream",
+                                });
+                              } else {
+                                // Treat as raw string data
+                                blob = new Blob([data.file_data], {
+                                  type:
+                                    data.file_type ||
+                                    "application/octet-stream",
+                                });
+                              }
+
+                              // Create download link
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = url;
+                              a.download = data.file_name || "download";
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              URL.revokeObjectURL(url);
+                            } catch (processingError) {
+                              console.error(
+                                "Error processing file data:",
+                                processingError
+                              );
+                              // Fallback: try to create a blob directly from the data
+                              try {
+                                const blob = new Blob([data.file_data], {
+                                  type:
+                                    data.file_type ||
+                                    "application/octet-stream",
+                                });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download = data.file_name || "download";
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
+                              } catch (fallbackError) {
+                                console.error("Fallback error:", fallbackError);
+                                toast({
+                                  title: "Error",
+                                  description:
+                                    "Failed to process file data. The file may be corrupted.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }
+                          }
+                        } catch (error) {
+                          console.error("Error downloading file:", error);
+                          toast({
+                            title: "Error",
+                            description:
+                              "Failed to download file. There was a database error.",
+                            variant: "destructive",
+                          });
+                        }
+                      } else {
+                        // For URL resources, open in new tab
+                        window.open(selectedResource.url, "_blank");
+                      }
+                    }}
+                    className="bg-gradient-primary"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    {selectedResource.file_data
+                      ? "Download File"
+                      : "Visit Link"}
+                  </Button>
+
+                  <Button variant="outline" onClick={closeResourceModal}>
+                    {t("common.close")}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );

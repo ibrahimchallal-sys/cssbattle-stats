@@ -57,7 +57,14 @@ export const usePlayerMessages = (playerEmail: string | undefined) => {
   };
 
   useEffect(() => {
-    console.log("usePlayerMessages effect triggered with playerEmail:", playerEmail);
+    if (!playerEmail) {
+      console.log("usePlayerMessages: No player email provided, skipping fetch");
+      setUnreadCount(0);
+      setLoading(false);
+      return;
+    }
+    
+    console.log("usePlayerMessages: Initializing for player email:", playerEmail);
     fetchUnreadCount();
 
     // Listen for messages read event
