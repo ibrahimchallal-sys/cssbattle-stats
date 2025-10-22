@@ -15,6 +15,8 @@ import DatabaseTest from "./pages/DatabaseTest";
 import DatabasePermissionsTest from "./pages/DatabasePermissionsTest";
 import TestPlayerFetch from "./pages/TestPlayerFetch";
 import TestStorage from "./pages/TestStorage";
+import QuizScoreTest from "./pages/QuizScoreTest";
+import QuizDebug from "./pages/QuizDebug";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import PlayerProtectedRoute from "./components/PlayerProtectedRoute";
 import PlayerMessagesPanel from "./components/PlayerMessagesPanel";
@@ -177,6 +179,24 @@ const AppContent = () => {
                 <TestStorage />
               </>
             </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/quiz-score-test"
+          element={
+            <>
+              <Navbar />
+              <QuizScoreTest />
+            </>
+          }
+        />
+        <Route
+          path="/quiz-debug"
+          element={
+            <>
+              <Navbar />
+              <QuizDebug />
+            </>
           }
         />
       </Routes>

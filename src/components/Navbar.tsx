@@ -153,22 +153,22 @@ const Navbar = () => {
               </div>
               <div className="ml-2 min-w-0">
                 <div className="text-xs font-medium text-foreground flex flex-col bg-background/80 backdrop-blur-sm rounded-lg py-1 px-2">
-                  {t("navbar.institute").split(" ").length > 3 ? (
+                  {"Institut Spécialisé de Formation de l'Offshoring".split(" ").length > 3 ? (
                     <>
                       <span className="leading-tight truncate">
-                        {t("navbar.institute").split(" ").slice(0, 2).join(" ")}
+                        {"Institut Spécialisé de Formation de l'Offshoring".split(" ").slice(0, 2).join(" ")}
                       </span>
                       <span className="leading-tight truncate">
-                        {t("navbar.institute").split(" ").slice(2).join(" ")}
+                        {"Institut Spécialisé de Formation de l'Offshoring".split(" ").slice(2).join(" ")}
                       </span>
                     </>
                   ) : (
                     <>
                       <span className="text-[11px] leading-tight truncate">
-                        {t("navbar.institute").split(" ").slice(0, 3).join(" ")}
+                        {"Institut Spécialisé de Formation de l'Offshoring".split(" ").slice(0, 3).join(" ")}
                       </span>
                       <span className="text-[11px] leading-tight truncate">
-                        {t("navbar.institute").split(" ").slice(3).join(" ")}
+                        {"Institut Spécialisé de Formation de l'Offshoring".split(" ").slice(3).join(" ")}
                       </span>
                     </>
                   )}
@@ -385,22 +385,22 @@ const Navbar = () => {
               className="h-10 w-auto"
             />
             <div className="ml-3 text-sm font-medium text-foreground flex flex-col justify-center">
-              {t("navbar.institute").split(" ").length > 3 ? (
+              {"Institut Spécialisé de Formation de l'Offshoring".split(" ").length > 3 ? (
                 <>
                   <span>
-                    {t("navbar.institute").split(" ").slice(0, 2).join(" ")}
+                    {"Institut Spécialisé de Formation de l'Offshoring".split(" ").slice(0, 2).join(" ")}
                   </span>
                   <span>
-                    {t("navbar.institute").split(" ").slice(2).join(" ")}
+                    {"Institut Spécialisé de Formation de l'Offshoring".split(" ").slice(2).join(" ")}
                   </span>
                 </>
               ) : (
                 <>
                   <span className="text-[13px]">
-                    {t("navbar.institute").split(" ").slice(0, 3).join(" ")}
+                    {"Institut Spécialisé de Formation de l'Offshoring".split(" ").slice(0, 3).join(" ")}
                   </span>
                   <span className="text-[13px]">
-                    {t("navbar.institute").split(" ").slice(3).join(" ")}
+                    {"Institut Spécialisé de Formation de l'Offshoring".split(" ").slice(3).join(" ")}
                   </span>
                 </>
               )}

@@ -1,161 +1,149 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const TestPlayerFetch = () => {
-  const [players, setPlayers] = useState<any[]>([]);
+  const { user } = useAuth();
+  const [testResults, setTestResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
-  const [migrationStatus, setMigrationStatus] = useState<string>("");
 
-  const testFetchPlayers = async () => {
+  const runTests = async () => {
+    if (!user) {
+      setTestResults([{ test: "User Authentication", status: "Failed", message: "No user authenticated" }]);
+      return;
+    }
+
     setLoading(true);
-    setError(null);
+    const results = [];
 
     try {
-      // First, get current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-      console.log("Current user:", user);
-
-      // Try to fetch players
-      const { data, error } = await supabase
+      // Test 1: Check if user exists in players table
+      const { data: playerData, error: playerError } = await supabase
         .from("players")
-        .select("*")
-        .limit(10);
+        .select("id, full_name, email")
+        .eq("id", user.id)
+        .single();
 
-      console.log("Players fetch result:", { data, error });
-
-      if (error) {
-        setError(error.message);
-      } else {
-        setPlayers(data || []);
+      results.push({
+        test: "Player Verification",
+        status: playerError ? "Failed" : "Passed",
+        message: playerError 
+          ? `Error: ${playerError.message} (Code: ${playerError.code || 'N/A'})` 
+          : `Found player: ${playerData?.full_name} (${playerData?.email})`
+      });
+      
+      // Test 1b: If player not found, check by email
+      if (playerError && playerError.code === "PGRST116") {
+        const { data: emailPlayerData, error: emailPlayerError } = await supabase
+          .from("players")
+          .select("id, full_name, email")
+          .eq("email", user.email)
+          .single();
+          
+        results.push({
+          test: "Player Verification (by email)",
+          status: emailPlayerError ? "Failed" : "Passed",
+          message: emailPlayerError 
+            ? `Error: ${emailPlayerError.message} (Code: ${emailPlayerError.code || 'N/A'})` 
+            : `Found player by email: ${emailPlayerData?.full_name} (${emailPlayerData?.email})`
+        });
       }
-    } catch (err) {
-      console.error("Test error:", err);
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const applyMigrations = async () => {
-    setLoading(true);
-    try {
-      // Note: execute_sql function doesn't exist in the database
-      // This test functionality has been disabled
-      setError("execute_sql function is not available");
-      setMigrationStatus("Test migrations disabled - execute_sql function not found");
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
+      // Test 2: Check if we can read quiz scores
+      const { data: quizData, error: quizError } = await supabase
+        .from("quiz_scores")
+        .select("score")
+        .eq("player_id", user.id)
+        .limit(1);
 
-  const applyAdminMessagingPolicy = async () => {
-    setLoading(true);
-    try {
-      // Note: execute_sql function doesn't exist in the database
-      // This test functionality has been disabled
-      setError("execute_sql function is not available");
-      setMigrationStatus("Test admin messaging policy disabled - execute_sql function not found");
-    } catch (err) {
-      setError((err as Error).message);
-      setMigrationStatus(
-        "Error applying admin messaging policy: " + (err as Error).message
-      );
-    } finally {
-      setLoading(false);
+      results.push({
+        test: "Quiz Scores Read Access",
+        status: quizError ? "Failed" : "Passed",
+        message: quizError 
+          ? `Error: ${quizError.message}` 
+          : `Found ${quizData?.length || 0} existing scores`
+      });
+
+      // Test 3: Try to insert a test score (will fail if already exists)
+      const { data: insertData, error: insertError } = await supabase
+        .from("quiz_scores")
+        .insert({
+          player_id: user.id,
+          score: 0,
+          total_questions: 6,
+          quiz_title: "Test Quiz",
+          completed_at: new Date().toISOString(),
+        });
+
+      results.push({
+        test: "Quiz Score Insert Test",
+        status: insertError ? "Failed" : "Passed",
+        message: insertError 
+          ? `Error: ${insertError.message}` 
+          : "Successfully inserted test score"
+      });
+
+      // Clean up test data if inserted
+      if (!insertError) {
+        await supabase
+          .from("quiz_scores")
+          .delete()
+          .eq("player_id", user.id)
+          .eq("quiz_title", "Test Quiz");
+      }
+
+    } catch (error) {
+      results.push({
+        test: "General Test",
+        status: "Failed",
+        message: `Exception: ${(error as Error).message}`
+      });
     }
+
+    setTestResults(results);
+    setLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4 sm:px-6">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-foreground mb-8">
-          Player Fetch Test
-        </h1>
-
-        <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 p-6 mb-6">
-          <div className="flex gap-4">
-            <Button
-              onClick={testFetchPlayers}
-              disabled={loading}
-              className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
-            >
-              {loading ? "Testing..." : "Test Player Fetch"}
-            </Button>
-            <Button
-              onClick={applyMigrations}
-              disabled={loading}
-              variant="outline"
-              className="border-battle-purple/50 hover:bg-battle-purple/10"
-            >
-              {loading ? "Applying Migrations..." : "Apply Migrations"}
-            </Button>
-          </div>
-        </Card>
-
-        {migrationStatus && (
-          <Card className="bg-green-900/50 backdrop-blur-sm border-green-500/30 p-6 mb-6">
-            <h2 className="text-xl font-bold text-green-200 mb-4">
-              Migration Status
-            </h2>
-            <p className="text-green-100">{migrationStatus}</p>
-          </Card>
-        )}
-
-        {error && (
-          <Card className="bg-red-900/50 backdrop-blur-sm border-red-500/30 p-6 mb-6">
-            <h2 className="text-xl font-bold text-red-200 mb-4">Error</h2>
-            <p className="text-red-100">{error}</p>
-          </Card>
-        )}
-
-        {user && (
-          <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 p-6 mb-6">
-            <h2 className="text-xl font-bold text-foreground mb-4">
-              Current User
-            </h2>
-            <pre className="bg-background/50 p-4 rounded-lg overflow-auto">
-              {JSON.stringify(user, null, 2)}
-            </pre>
-          </Card>
-        )}
-
-        <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 p-6">
-          <h2 className="text-xl font-bold text-foreground mb-4">
-            Players ({players.length})
-          </h2>
-          {players.length > 0 ? (
-            <div className="space-y-4">
-              {players.map((player) => (
-                <Card key={player.id} className="bg-background/50 p-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-bold">{player.full_name}</h3>
-                      <p className="text-foreground/70">{player.email}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-mono">Score: {player.score || 0}</p>
-                      <p className="text-sm text-foreground/70">
-                        {player.group_name || "No group"}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+    <div className="container mx-auto px-4 py-8">
+      <Card>
+        <CardHeader>
+          <CardTitle>Player Data Test</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <p>User ID: {user?.id || "Not authenticated"}</p>
+              <p>User Email: {user?.email || "Not authenticated"}</p>
             </div>
-          ) : (
-            <p className="text-foreground/70">No players found</p>
-          )}
-        </Card>
-      </div>
+            
+            <Button onClick={runTests} disabled={loading || !user}>
+              {loading ? "Running Tests..." : "Run Database Tests"}
+            </Button>
+
+            {testResults.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">Test Results:</h3>
+                {testResults.map((result, index) => (
+                  <div 
+                    key={index} 
+                    className={`p-3 rounded ${
+                      result.status === "Passed" 
+                        ? "bg-green-100 border border-green-300" 
+                        : "bg-red-100 border border-red-300"
+                    }`}
+                  >
+                    <h4 className="font-medium">{result.test}: {result.status}</h4>
+                    <p className="text-sm">{result.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

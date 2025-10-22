@@ -64,29 +64,75 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error("AuthContext - Error fetching player profile:", error);
-        // Try fetching by email as fallback
-        const { data: emailProfile, error: emailError } = await supabase
-          .from("players")
-          .select(
-            "id, full_name, email, cssbattle_profile_link, group_name, phone, video_completed"
-          )
-          .eq("email", session.user.email)
-          .single();
-          
-        if (emailError) {
-          console.error("AuthContext - Error fetching by email:", emailError);
-          // Return basic user data if no profile found
-          return {
-            id: session.user.id,
-            email: session.user.email!,
-            full_name: session.user.email!,
-            email_confirmed_at: session.user.email_confirmed_at,
-            video_completed: false,
-            unreadMessageCount: 0,
-          };
-        }
         
-        profile = emailProfile;
+        // If player not found by ID, try to create the player record
+        if (error.code === "PGRST116") { // No rows returned
+          console.warn("Player not found by ID, attempting to create player record");
+          
+          const { error: insertError } = await supabase
+            .from("players")
+            .insert({
+              id: session.user.id,
+              email: session.user.email!,
+              full_name: session.user.email!.split('@')[0],
+              score: 0,
+              group_name: "Default",
+              video_completed: false
+            });
+            
+          if (insertError) {
+            console.error("AuthContext - Error creating player record:", insertError);
+          } else {
+            console.log("AuthContext - Player record created successfully");
+            
+            // Try fetching the newly created player
+            const { data: newProfile, error: newError } = await supabase
+              .from("players")
+              .select(
+                "id, full_name, email, cssbattle_profile_link, group_name, phone, video_completed"
+              )
+              .eq("id", session.user.id)
+              .single();
+              
+            if (!newError && newProfile) {
+              profile = newProfile;
+            } else {
+              // Return basic user data if still can't fetch
+              return {
+                id: session.user.id,
+                email: session.user.email!,
+                full_name: session.user.email!,
+                email_confirmed_at: session.user.email_confirmed_at,
+                video_completed: false,
+                unreadMessageCount: 0,
+              };
+            }
+          }
+        } else {
+          // Try fetching by email as fallback
+          const { data: emailProfile, error: emailError } = await supabase
+            .from("players")
+            .select(
+              "id, full_name, email, cssbattle_profile_link, group_name, phone, video_completed"
+            )
+            .eq("email", session.user.email)
+            .single();
+            
+          if (emailError) {
+            console.error("AuthContext - Error fetching by email:", emailError);
+            // Return basic user data if no profile found
+            return {
+              id: session.user.id,
+              email: session.user.email!,
+              full_name: session.user.email!,
+              email_confirmed_at: session.user.email_confirmed_at,
+              video_completed: false,
+              unreadMessageCount: 0,
+            };
+          }
+          
+          profile = emailProfile;
+        }
       }
 
       // Fetch unread message count for the player

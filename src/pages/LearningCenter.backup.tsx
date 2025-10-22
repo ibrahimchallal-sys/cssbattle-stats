@@ -4,16 +4,34 @@ import Navbar from "@/components/Navbar";
 import FloatingShape from "@/components/FloatingShape";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Play,
   Pause,
   RotateCcw,
+  FileText,
+  BookOpen,
   Trophy,
+  Lightbulb,
   CheckCircle,
   XCircle,
   AlertCircle,
   Maximize,
   Minimize,
+  Lock,
+  Search,
+  Filter,
+  Calendar,
+  File,
+  Video,
+  Link,
+  ChevronDown,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Download,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +39,13 @@ import { useAdmin } from "@/contexts/AdminContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import usePreventRightClick from "@/hooks/usePreventRightClick";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface QuizQuestion {
   id: number;
@@ -28,6 +53,19 @@ interface QuizQuestion {
   options: string[];
   correctAnswer: number;
   explanation: string;
+}
+
+interface LearningResource {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  type: "pdf" | "doc" | "link" | "video";
+  file_data?: string;
+  file_name?: string;
+  file_size?: number;
+  file_type?: string;
+  created_at?: string;
 }
 
 const LearningCenter = () => {
@@ -59,6 +97,20 @@ const LearningCenter = () => {
   const [scoreSaved, setScoreSaved] = useState(false);
   const [quizCompletionChecked, setQuizCompletionChecked] = useState(false);
 
+  // Resource state
+  const [resources, setResources] = useState<LearningResource[]>([]);
+  const [filteredResources, setFilteredResources] = useState<
+    LearningResource[]
+  >([]);
+  const [loadingResources, setLoadingResources] = useState(true);
+  const [visibleResources, setVisibleResources] = useState(3);
+  const [selectedResource, setSelectedResource] =
+    useState<LearningResource | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [resourceTypeFilter, setResourceTypeFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"date" | "title">("date");
+  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
+
   // Check if user has already completed the quiz
   useEffect(() => {
     // Reset the check flag when user changes
@@ -78,18 +130,11 @@ const LearningCenter = () => {
           if (localStorageCompleted) {
             setQuizCompleted(true);
             // Also restore the quiz score if available
-            try {
-              const scoreKey = `quiz_score_${user.id}`;
-              const savedScore = localStorage.getItem(scoreKey);
-              console.log("Restoring quiz score from localStorage:", savedScore);
-              if (savedScore) {
-                const parsedScore = parseInt(savedScore, 10);
-                if (!isNaN(parsedScore)) {
-                  setQuizScore(parsedScore);
-                }
-              }
-            } catch (storageError) {
-              console.error("Error reading from localStorage:", storageError);
+            const scoreKey = `quiz_score_${user.id}`;
+            const savedScore = localStorage.getItem(scoreKey);
+            console.log("Restoring quiz score from localStorage:", savedScore);
+            if (savedScore) {
+              setQuizScore(parseInt(savedScore, 10));
             }
             setQuizCompletionChecked(true);
             return;
@@ -108,11 +153,6 @@ const LearningCenter = () => {
 
           if (error) {
             console.error("Error checking quiz completion in database:", error);
-            toast({
-              title: "Error",
-              description: `Failed to check quiz completion: ${error.message}.`,
-              variant: "destructive",
-            });
             setQuizCompletionChecked(true);
             return;
           }
@@ -124,14 +164,9 @@ const LearningCenter = () => {
             // We only set scoreSaved to true when actually saving a new score
 
             // Also save to localStorage for faster loading next time
-            try {
-              localStorage.setItem(completionKey, "true");
-              const scoreKey = `quiz_score_${user.id}`;
-              localStorage.setItem(scoreKey, data[0].score.toString());
-            } catch (storageError) {
-              console.error("Error saving to localStorage:", storageError);
-              // Continue even if localStorage fails
-            }
+            localStorage.setItem(completionKey, "true");
+            const scoreKey = `quiz_score_${user.id}`;
+            localStorage.setItem(scoreKey, data[0].score.toString());
           }
         } catch (error) {
           console.error("Failed to check quiz completion:", error);
@@ -142,39 +177,12 @@ const LearningCenter = () => {
     };
 
     checkQuizCompletion();
-  }, [user]); // Remove quizCompletionChecked from dependencies
+  }, [user, language]); // Add language as dependency
 
   // Save quiz score when completed
   useEffect(() => {
-    console.log("Quiz save effect triggered", { quizCompleted, scoreSaved, user });
-    
     const saveScore = async (finalScore: number) => {
-      // Reset scoreSaved state if there was an error in a previous attempt
-      // This allows retrying the save operation
-      if (scoreSaved && !quizCompleted) {
-        console.log("Resetting scoreSaved state for retry");
-        setScoreSaved(false);
-      }
-      if (!user) {
-        console.error("No user object available for saving score");
-        toast({
-          title: "Error",
-          description: "User not authenticated. Please log in and try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Verify user object has required properties
-      if (!user.id) {
-        console.error("User object missing ID:", user);
-        toast({
-          title: "Error",
-          description: "User data incomplete. Please log out and log back in.",
-          variant: "destructive",
-        });
-        return;
-      }
+      if (!user) return;
 
       try {
         // First, check if a score already exists for this user
@@ -189,23 +197,17 @@ const LearningCenter = () => {
           console.error("Error checking existing quiz score:", checkError);
           toast({
             title: "Error",
-            description: `Failed to check quiz status: ${checkError.message}. Please try again.`,
+            description: "Failed to check quiz status. Please try again.",
             variant: "destructive",
           });
           return;
         }
-        
-        console.log("Existing score check result:", existingData);
 
         // If score already exists, don't insert again
         if (existingData && existingData.length > 0) {
           console.log(
             "Quiz score already exists for user, not inserting again"
           );
-          toast({
-            title: "Info",
-            description: "Your quiz score has already been saved previously.",
-          });
           setScoreSaved(true); // Set scoreSaved to true to prevent future attempts
           return;
         }
@@ -217,73 +219,6 @@ const LearningCenter = () => {
           "score:",
           finalScore
         );
-        
-        // First, verify that the player exists in the players table
-        // If not found, try to create the player record (handles edge cases where registration was incomplete)
-        console.log("Verifying player existence for user ID:", user.id);
-        const { data: playerData, error: playerError } = await supabase
-          .from("players")
-          .select("id")
-          .eq("id", user.id)
-          .single();
-          
-        if (playerError && playerError.code === "PGRST116") { // No rows returned
-          console.warn("Player not found in database, attempting to create player record");
-          
-          // Try to create the player record
-          const { error: insertError } = await supabase
-            .from("players")
-            .insert({
-              id: user.id,
-              email: user.email,
-              full_name: user.full_name || user.email.split('@')[0],
-              score: 0,
-              // Default values for other required fields
-              group_name: "Default",
-              video_completed: false
-            });
-            
-          if (insertError) {
-            console.error("Error creating player record:", insertError);
-            toast({
-              title: "Error",
-              description: `Player verification failed: ${insertError.message}. Please contact support.`,
-              variant: "destructive",
-            });
-            return;
-          }
-          
-          console.log("Player record created successfully");
-        } else if (playerError) {
-          console.error("Error verifying player existence:", playerError);
-          toast({
-            title: "Error",
-            description: `Player verification failed: ${playerError.message}. Please contact support.`,
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        if (!playerData && !(playerError && playerError.code === "PGRST116")) {
-          console.error("Player not found in database");
-          toast({
-            title: "Error",
-            description: "Player account not found. Please contact support.",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        console.log("Player verification successful");
-        
-        console.log("Attempting to insert quiz score:", {
-          player_id: user.id,
-          score: finalScore,
-          total_questions: quizQuestions.length,
-          quiz_title: "Learning Center Quiz",
-          completed_at: new Date().toISOString(),
-        });
-        
         const { data, error } = await supabase.from("quiz_scores").insert({
           player_id: user.id,
           score: finalScore,
@@ -296,27 +231,21 @@ const LearningCenter = () => {
           console.error("Error saving quiz score to database:", error);
           toast({
             title: "Error",
-            description: `Failed to save quiz score: ${error.message}. Please try again or contact support.`,
+            description: "Failed to save quiz score. Please try again.",
             variant: "destructive",
           });
           return;
         }
 
         console.log("Quiz score saved to database successfully:", data);
-        console.log("Setting scoreSaved to true");
         setScoreSaved(true); // Only set this to true when we actually save
 
         // Also save completion status in localStorage
-        try {
-          const completionKey = `quiz_completed_${user.id}`;
-          localStorage.setItem(completionKey, "true");
-          const scoreKey = `quiz_score_${user.id}`;
-          localStorage.setItem(scoreKey, finalScore.toString());
-          console.log("Quiz completion status saved to localStorage");
-        } catch (storageError) {
-          console.error("Error saving to localStorage:", storageError);
-          // Continue even if localStorage fails - the database save was successful
-        }
+        const completionKey = `quiz_completed_${user.id}`;
+        localStorage.setItem(completionKey, "true");
+        const scoreKey = `quiz_score_${user.id}`;
+        localStorage.setItem(scoreKey, finalScore.toString());
+        console.log("Quiz completion status saved to localStorage");
 
         // Show success message to user
         toast({
@@ -328,21 +257,51 @@ const LearningCenter = () => {
         console.error("Failed to save quiz score", e);
         toast({
           title: "Error",
-          description: `Failed to save quiz score: ${(e as Error).message}. Please try again.`,
+          description: "Failed to save quiz score. Please try again.",
           variant: "destructive",
         });
       }
     };
 
     if (quizCompleted && !scoreSaved) {
-      console.log("Quiz completed, saving score...", { quizCompleted, scoreSaved, quizScore, user });
+      console.log("Quiz completed, saving score...");
       saveScore(quizScore);
-    } else if (quizCompleted && scoreSaved) {
-      console.log("Quiz already completed and score saved", { quizCompleted, scoreSaved, quizScore, user });
-    } else {
-      console.log("Quiz not completed yet", { quizCompleted, scoreSaved, quizScore, user });
     }
   }, [quizCompleted, scoreSaved, user]);
+
+  // Fetch resources from database
+  useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("learning_resources")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        const resourcesData = (data || []).map((r) => ({
+          id: r.id,
+          title: r.title,
+          description: r.description || "",
+          url: r.url,
+          type: r.type as "pdf" | "doc" | "link" | "video",
+          file_data: r.file_data,
+          file_name: r.file_name,
+          file_size: r.file_size,
+          file_type: r.file_type,
+          created_at: r.created_at,
+        }));
+        setResources(resourcesData);
+        setFilteredResources(resourcesData);
+      } catch (error) {
+        console.error("Failed to fetch resources:", error);
+      } finally {
+        setLoadingResources(false);
+      }
+    };
+
+    fetchResources();
+  }, []);
 
   // Sample quiz questions - 5 basic questions + 1 advanced question
   const quizQuestions: QuizQuestion[] = [
@@ -717,7 +676,6 @@ const LearningCenter = () => {
         setQuizScore(newScore);
       } else {
         // For the last question, update the score immediately and mark quiz as completed
-        console.log("Setting quiz as completed with score:", newScore);
         setQuizScore(newScore);
         setQuizCompleted(true);
         toast({
@@ -737,6 +695,21 @@ const LearningCenter = () => {
         });
       }
     }, 2000);
+  };
+
+  const getResourceIcon = (type: string) => {
+    switch (type) {
+      case "pdf":
+        return <FileText className="w-5 h-5 text-red-500" />;
+      case "doc":
+        return <FileText className="w-5 h-5 text-blue-500" />;
+      case "video":
+        return <Play className="w-5 h-5 text-purple-500" />;
+      case "link":
+        return <ExternalLink className="w-5 h-5 text-green-500" />;
+      default:
+        return <BookOpen className="w-5 h-5 text-gray-500" />;
+    }
   };
 
   // Check if user has already completed the video
@@ -793,7 +766,7 @@ const LearningCenter = () => {
     };
 
     checkVideoCompletion();
-  }, [user]); // Remove videoCompletionChecked from dependencies
+  }, [user, language]); // Add language as dependency
 
   // Save video completion status
   const saveVideoCompletion = async () => {
@@ -825,10 +798,68 @@ const LearningCenter = () => {
     }
   };
 
+  // Filter resources based on search term and type filter
+  useEffect(() => {
+    let result = [...resources];
+
+    // Apply search filter
+    if (searchTerm) {
+      result = result.filter(
+        (resource) =>
+          resource.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          resource.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply type filter
+    if (resourceTypeFilter !== "all") {
+      result = result.filter(
+        (resource) => resource.type === resourceTypeFilter
+      );
+    }
+
+    // Apply sorting
+    result.sort((a, b) => {
+      if (sortBy === "date") {
+        return (
+          new Date(b.created_at || "").getTime() -
+          new Date(a.created_at || "").getTime()
+        );
+      } else {
+        return a.title.localeCompare(b.title);
+      }
+    });
+
+    setFilteredResources(result);
+    setVisibleResources(3); // Reset to show only 3 resources when filters change
+  }, [resources, searchTerm, resourceTypeFilter, sortBy]);
+
+  // Load more resources
+  const loadMoreResources = () => {
+    setVisibleResources((prev) => Math.min(prev + 3, filteredResources.length));
+  };
+
+  // Load less resources
+  const loadLessResources = () => {
+    setVisibleResources((prev) => Math.max(3, prev - 3));
+  };
+
+  // Open resource detail modal
+  const openResourceModal = (resource: LearningResource) => {
+    setSelectedResource(resource);
+    setIsResourceModalOpen(true);
+  };
+
+  // Close resource detail modal
+  const closeResourceModal = () => {
+    setIsResourceModalOpen(false);
+    setSelectedResource(null);
+  };
+
   return (
     <div className="min-h-screen bg-background overflow-hidden relative">
       <Navbar />
-      
+
       {/* Animated Background Shapes */}
       <FloatingShape color="purple" size={200} top="10%" left="5%" delay={0} />
       <FloatingShape
@@ -865,9 +896,10 @@ const LearningCenter = () => {
             </p>
           </div>
 
-          <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
-            {/* Video Tutorial Section */}
-            <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30">
+          {/* Library-style layout with tabs for different sections */}
+          <div className="grid gap-8 grid-cols-1 lg:grid-cols-3">
+            {/* Video Tutorial Section - Full width on mobile, 2/3 width on large screens */}
+            <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 lg:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Play className="w-5 h-5 mr-2 text-battle-purple" />
@@ -1108,93 +1140,95 @@ const LearningCenter = () => {
               </CardContent>
             </Card>
 
-            {/* Quiz Section - Only show if quiz is not completed */}
-            {!quizCompleted && (
-              <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Trophy className="w-5 h-5 mr-2 text-battle-purple" />
-                    {t("learning.quiz.title")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {!videoCompleted ? (
-                    <div className="text-center py-8">
-                      <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-                      <h3 className="text-2xl font-bold mb-2">
-                        {t("learning.quiz.videoRequired")}
-                      </h3>
-                      <p className="text-muted-foreground mb-6">
-                        {t("learning.quiz.videoRequiredDesc")}
-                      </p>
-                      <Button
-                        onClick={() => {
-                          if (videoRef.current) {
-                            videoRef.current.scrollIntoView({
-                              behavior: "smooth",
-                            });
-                          }
-                        }}
-                        className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
-                      >
-                        {t("learning.quiz.watchVideo")}
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">
-                          {t("learning.quiz.question")
-                            .replace(
-                              "{current}",
-                              (currentQuestion + 1).toString()
-                            )
-                            .replace(
-                              "{total}",
-                              quizQuestions.length.toString()
-                            )}
-                        </span>
-                        <span className="text-sm font-medium">
-                          {t("common.continue")}: {quizScore}
-                        </span>
-                      </div>
-
-                      <div>
-                        <h3 className="text-xl font-semibold mb-4">
-                          {quizQuestions[currentQuestion].question}
+            {/* Quiz Section - Full width on mobile, 1/3 width on large screens */}
+            <div className="lg:col-span-1">
+              {/* Quiz Section - Only show if quiz is not completed */}
+              {!quizCompleted && (
+                <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 h-full flex flex-col">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Trophy className="w-5 h-5 mr-2 text-battle-purple" />
+                      {t("learning.quiz.title")}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-grow">
+                    {!videoCompleted ? (
+                      <div className="text-center py-8 flex flex-col items-center justify-center h-full">
+                        <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+                        <h3 className="text-2xl font-bold mb-2">
+                          {t("learning.quiz.videoRequired")}
                         </h3>
+                        <p className="text-muted-foreground mb-6">
+                          {t("learning.quiz.videoRequiredDesc")}
+                        </p>
+                        <Button
+                          onClick={() => {
+                            if (videoRef.current) {
+                              videoRef.current.scrollIntoView({
+                                behavior: "smooth",
+                              });
+                            }
+                          }}
+                          className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
+                        >
+                          {t("learning.quiz.watchVideo")}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">
+                            {t("learning.quiz.question")
+                              .replace(
+                                "{current}",
+                                (currentQuestion + 1).toString()
+                              )
+                              .replace(
+                                "{total}",
+                                quizQuestions.length.toString()
+                              )}
+                          </span>
+                          <span className="text-sm font-medium">
+                            {t("common.continue")}: {quizScore}
+                          </span>
+                        </div>
 
-                        <div className="space-y-3">
-                          {quizQuestions[currentQuestion].options.map(
-                            (option, index) => (
-                              <div
-                                key={index}
-                                onClick={() =>
-                                  !showResult && handleAnswerSelect(index)
-                                }
-                                className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                                  selectedAnswer === index
-                                    ? "border-primary bg-primary/10"
-                                    : "border-border hover:border-primary/50"
-                                } ${
-                                  showResult
-                                    ? index ===
-                                      quizQuestions[currentQuestion]
-                                        .correctAnswer
+                        <div>
+                          <h3 className="text-xl font-semibold mb-4">
+                            {quizQuestions[currentQuestion].question}
+                          </h3>
+
+                          <div className="space-y-3">
+                            {quizQuestions[currentQuestion].options.map(
+                              (option, index) => (
+                                <div
+                                  key={index}
+                                  onClick={() =>
+                                    !showResult && handleAnswerSelect(index)
+                                  }
+                                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                                    selectedAnswer === index
+                                      ? "border-primary bg-primary/10"
+                                      : "border-border hover:border-primary/50"
+                                  } ${
+                                    showResult
+                                      ? index ===
+                                        quizQuestions[currentQuestion]
+                                          .correctAnswer
                                       ? "border-green-500 bg-green-500/10"
                                       : selectedAnswer === index
                                       ? "border-red-500 bg-red-500/10"
                                       : ""
                                     : ""
-                                }`}
-                              >
-                                <div className="flex items-center">
-                                  <div
-                                    className={`w-6 h-6 rounded-full border mr-3 flex items-center justify-center ${
-                                      selectedAnswer === index
-                                        ? "border-primary bg-primary"
-                                        : "border-border"
-                                    } ${
+                                  }`}
+                                >
+                                  <div className="flex items-center">
+                                    <div
+                                      className={`w-6 h-6 rounded-full border mr-3 flex items-center justify-center ${
+                                        selectedAnswer === index
+                                          ? "border-primary bg-primary"
+                                          : "border-border"
+                                      } ${
                                       showResult
                                         ? index ===
                                           quizQuestions[currentQuestion]
@@ -1221,86 +1255,90 @@ const LearningCenter = () => {
                                   </div>
                                   <span>{option}</span>
                                 </div>
+                              )
+                            )}
+                          </div>
+
+                          {showResult && (
+                            <div
+                              className={`mt-4 p-4 rounded-lg ${
+                                selectedAnswer ===
+                                quizQuestions[currentQuestion].correctAnswer
+                                  ? "bg-green-500/10 border border-green-500/30"
+                                  : "bg-red-500/10 border border-red-500/30"
+                              }`}
+                            >
+                              <div className="flex items-start">
+                                {selectedAnswer ===
+                                quizQuestions[currentQuestion].correctAnswer ? (
+                                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+                                ) : (
+                                  <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
+                                )}
+                                <div>
+                                  <p
+                                    className={`font-medium ${
+                                      selectedAnswer ===
+                                      quizQuestions[currentQuestion].correctAnswer
+                                        ? "text-green-500"
+                                        : "text-red-500"
+                                    }`}
+                                  >
+                                    {selectedAnswer ===
+                                    quizQuestions[currentQuestion].correctAnswer
+                                      ? t("learning.quiz.correct")
+                                      : t("learning.quiz.incorrect")}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {quizQuestions[currentQuestion].explanation}
+                                  </p>
+                                </div>
                               </div>
-                            )
+                            </div>
                           )}
                         </div>
 
-                        {showResult && (
-                          <div
-                            className={`mt-4 p-4 rounded-lg ${
-                              selectedAnswer ===
-                              quizQuestions[currentQuestion].correctAnswer
-                                ? "bg-green-500/10 border border-green-500/30"
-                                : "bg-red-500/10 border border-red-500/30"
-                            }`}
-                          >
-                            <div className="flex items-start">
-                              {selectedAnswer ===
-                              quizQuestions[currentQuestion].correctAnswer ? (
-                                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
-                              ) : (
-                                <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
-                              )}
-                              <div>
-                                <p
-                                  className={`font-medium ${
-                                    selectedAnswer ===
-                                    quizQuestions[currentQuestion].correctAnswer
-                                      ? "text-green-500"
-                                      : "text-red-500"
-                                  }`}
-                                >
-                                  {selectedAnswer ===
-                                  quizQuestions[currentQuestion].correctAnswer
-                                    ? t("learning.quiz.correct")
-                                    : t("learning.quiz.incorrect")}
-                                </p>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {quizQuestions[currentQuestion].explanation}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                        <Button
+                          onClick={() => handleQuizSubmit()}
+                          disabled={selectedAnswer === null && !showResult}
+                          className="w-full bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
+                        >
+                          {showResult
+                            ? t("learning.quiz.next")
+                            : t("learning.quiz.submit")}
+                        </Button>
                       </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
-                      <Button
-                        onClick={() => handleQuizSubmit()}
-                        disabled={selectedAnswer === null && !showResult}
-                        className="w-full bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
-                      >
-                        {showResult
-                          ? t("learning.quiz.next")
-                          : t("learning.quiz.submit")}
-                      </Button>
+              {/* Show quiz results when completed */}
+              {quizCompleted && (
+                <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 h-full flex flex-col">
+                  <CardContent className="flex items-center justify-center h-full">
+                    <div className="text-center py-4">
+                      <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+                      <h3 className="text-2xl font-bold mb-2">
+                        {t("learning.quiz.completed")}
+                      </h3>
+                      <p className="text-muted-foreground mb-4">
+                        {t("learning.quiz.score")
+                          .replace("{score}", quizScore.toString())
+                          .replace("{total}", quizQuestions.length.toString())}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {t("learning.quiz.completedMessage")}
+                      </p>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Show quiz results when completed */}
-            {quizCompleted && (
-              <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30">
-                <div className="text-center py-4">
-                  <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-                  <h3 className="text-2xl font-bold mb-2">
-                    {t("learning.quiz.completed")}
-                  </h3>
-                  <p className="text-muted-foreground mb-4">
-                    {t("learning.quiz.score")
-                      .replace("{score}", quizScore.toString())
-                      .replace("{total}", quizQuestions.length.toString())}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {t("learning.quiz.completedMessage")}
-                  </p>
-                </div>
-              </Card>
-            )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Resource Detail Modal - REMOVED */}
       </main>
     </div>
   );
