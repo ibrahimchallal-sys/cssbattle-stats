@@ -203,17 +203,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Check for existing session
-    let { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
-      const retryResult = await new Promise<{ data: { session: Session | null }; error: any }>(resolve =>
-        setTimeout(async () => {
-          const result = await supabase.auth.getSession();
-          resolve(result);
-        }, 50)
-      );
-      session = retryResult.data.session;
-    }
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
       if (session?.user) {
         const userProfile = await fetchUserProfile(session);
