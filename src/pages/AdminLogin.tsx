@@ -19,7 +19,6 @@ const AdminLogin = () => {
   const adminEmails = [
     "ibrahimchallal@admincss.com",
     "younesshlibi@admincss.com",
-    "hamdiboumlik@admincss.com",
     "mazgouraabdalmonim@admincss.com",
   ];
   const adminPassword = "passwordPro";
@@ -74,7 +73,7 @@ const AdminLogin = () => {
         });
       }
 
-      // Check hardcoded admin credentials
+      // Check if email is in our admin list
       if (!adminEmails.includes(email)) {
         throw new Error("Invalid admin email");
       }

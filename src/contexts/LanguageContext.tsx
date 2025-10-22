@@ -25,10 +25,11 @@ const translations = {
     "navbar.home": "Home",
     "navbar.leaderboard": "Leaderboard",
     "navbar.learning": "Learning",
+    "navbar.resources": "Resources",
     "navbar.contact": "Contact",
     "navbar.dashboard": "Dashboard",
     "navbar.messages": "Messages",
-    "navbar.manageLearning": "Manage Learning", // Add this line
+    "navbar.manageLearning": "Manage Learning",
     "navbar.logout": "Logout",
     "navbar.login": "Log in",
     "navbar.register": "Sign up",
@@ -97,6 +98,15 @@ const translations = {
     "learning.video.copyRestrictedDesc":
       "Copy/paste actions are not allowed during learning.",
 
+    // Resources
+    "resources.title": "Learning Resources",
+    "resources.subtitle": "Access all learning materials and resources",
+    "resources.allResources": "All Resources",
+    "resources.none": "No Resources Available",
+    "resources.noneDesc": "There are currently no learning resources available. Please check back later.",
+    "resources.downloadFile": "Download File",
+    "resources.visitLink": "Visit Link",
+
     // Common
     "common.loading": "Loading...",
     "common.error": "Error",
@@ -126,10 +136,11 @@ const translations = {
     "navbar.home": "Accueil",
     "navbar.leaderboard": "Classement",
     "navbar.learning": "Apprentissage",
+    "navbar.resources": "Ressources",
     "navbar.contact": "Contact",
     "navbar.dashboard": "Tableau de bord",
     "navbar.messages": "Messages",
-    "navbar.manageLearning": "Gérer l'Apprentissage", // Add this line
+    "navbar.manageLearning": "Gérer l'Apprentissage",
     "navbar.logout": "Déconnexion",
     "navbar.login": "Connexion",
     "navbar.register": "S'inscrire",
@@ -200,6 +211,15 @@ const translations = {
       "Les captures d'écran ne sont pas autorisées pendant l'apprentissage.",
     "learning.video.copyRestrictedDesc":
       "Les actions de copier/coller ne sont pas autorisées pendant l'apprentissage.",
+
+    // Resources
+    "resources.title": "Ressources d'Apprentissage",
+    "resources.subtitle": "Accédez à tous les documents et ressources d'apprentissage",
+    "resources.allResources": "Toutes les Ressources",
+    "resources.none": "Aucune Ressource Disponible",
+    "resources.noneDesc": "Il n'y a actuellement aucune ressource d'apprentissage disponible. Veuillez revenir plus tard.",
+    "resources.downloadFile": "Télécharger le Fichier",
+    "resources.visitLink": "Visiter le Lien",
 
     // Common
     "common.loading": "Chargement...",

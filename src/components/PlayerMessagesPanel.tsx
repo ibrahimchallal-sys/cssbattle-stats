@@ -153,7 +153,6 @@ const PlayerMessagesPanel = ({
       const hardcodedAdmins = [
         { name: "Ibrahim Challal", email: "ibrahimchallal@admincss.com" },
         { name: "Youness Hlibi", email: "younesshlibi@admincss.com" },
-        { name: "Hamdi Boumlik", email: "hamdiboumlik@admincss.com" },
         {
           name: "Mazgour Abdalmonim",
           email: "mazgouraabdalmonim@admincss.com",
