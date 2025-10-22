@@ -4,15 +4,14 @@ import Navbar from "@/components/Navbar";
 import FloatingShape from "@/components/FloatingShape";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Play,
   Pause,
   RotateCcw,
-<<<<<<< HEAD
-=======
   FileText,
   BookOpen,
->>>>>>> 20b0275661b62e40097cda4673e2063a0c94d018
   Trophy,
   Lightbulb,
   CheckCircle,
@@ -31,6 +30,8 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
+  Download,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,8 +55,6 @@ interface QuizQuestion {
   explanation: string;
 }
 
-<<<<<<< HEAD
-=======
 interface LearningResource {
   id: string;
   title: string;
@@ -69,7 +68,6 @@ interface LearningResource {
   created_at?: string;
 }
 
->>>>>>> 20b0275661b62e40097cda4673e2063a0c94d018
 const LearningCenter = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -271,8 +269,6 @@ const LearningCenter = () => {
     }
   }, [quizCompleted, scoreSaved, user]);
 
-<<<<<<< HEAD
-=======
   // Fetch resources from database
   useEffect(() => {
     const fetchResources = async () => {
@@ -307,7 +303,6 @@ const LearningCenter = () => {
     fetchResources();
   }, []);
 
->>>>>>> 20b0275661b62e40097cda4673e2063a0c94d018
   // Sample quiz questions - 5 basic questions + 1 advanced question
   const quizQuestions: QuizQuestion[] = [
     {
@@ -702,8 +697,6 @@ const LearningCenter = () => {
     }, 2000);
   };
 
-<<<<<<< HEAD
-=======
   const getResourceIcon = (type: string) => {
     switch (type) {
       case "pdf":
@@ -719,7 +712,6 @@ const LearningCenter = () => {
     }
   };
 
->>>>>>> 20b0275661b62e40097cda4673e2063a0c94d018
   // Check if user has already completed the video
   useEffect(() => {
     // Reset the check flag when user changes
@@ -904,12 +896,8 @@ const LearningCenter = () => {
             </p>
           </div>
 
-<<<<<<< HEAD
-          <div className="grid gap-8 grid-cols-1 md:grid-cols-2">
-=======
           {/* Library-style layout with tabs for different sections */}
           <div className="grid gap-8 grid-cols-1 lg:grid-cols-3">
->>>>>>> 20b0275661b62e40097cda4673e2063a0c94d018
             {/* Video Tutorial Section */}
             <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 lg:col-span-2">
               <CardHeader>
@@ -1344,8 +1332,6 @@ const LearningCenter = () => {
                 </div>
               </Card>
             )}
-<<<<<<< HEAD
-=======
 
             {/* Learning Resources Section */}
             <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 lg:col-span-3">
@@ -1501,7 +1487,6 @@ const LearningCenter = () => {
                 )}
               </CardContent>
             </Card>
->>>>>>> 20b0275661b62e40097cda4673e2063a0c94d018
           </div>
         </div>
 
