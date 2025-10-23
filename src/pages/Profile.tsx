@@ -374,37 +374,6 @@ const ProfileNew = () => {
             )}
           </div>
 
-          {/* Verification Message */}
-          {playerProfile?.verified_ofppt === false && (
-            <div className="mb-6 p-4 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
-              <div className="flex items-center mb-2">
-                <AlertCircle className="w-5 h-5 text-yellow-500 mr-2" />
-                <h3 className="text-lg font-bold text-yellow-500">
-                  {t("profile.notVerified.title")}
-                </h3>
-              </div>
-              <p className="text-foreground/80 mb-3">
-                {t("profile.notVerified.message")}
-              </p>
-              <div className="text-sm text-foreground/70">
-                <p className="font-medium mb-2">{t("profile.notVerified.instructions")}</p>
-                <ol className="list-decimal list-inside space-y-1">
-                  <li>
-                    {t("profile.notVerified.step1")}
-                  </li>
-                  <li>
-                    {t("profile.notVerified.step2")}
-                  </li>
-                  <li>
-                    {t("profile.notVerified.step3")}
-                  </li>
-                  <li>{t("profile.notVerified.step4")}</li>
-                  <li>{t("profile.notVerified.step5")}</li>
-                </ol>
-              </div>
-            </div>
-          )}
-
           {error && (
             <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-foreground">
               Error: {error}

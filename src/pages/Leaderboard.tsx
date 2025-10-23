@@ -670,8 +670,9 @@ const Leaderboard = () => {
             </>
           )}
 
-          {/* Message for unverified players */}
-          {user && currentUserData && !currentUserData.verified_ofppt && (
+          {/* Message for unverified players - REMOVED as per requirement */}
+          
+          {user && currentUserData && currentUserData.verified_ofppt === true && (
             <Card className="bg-red-500/10 backdrop-blur-sm border-red-500/30 mt-6">
               <CardContent className="p-6">
                 <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
