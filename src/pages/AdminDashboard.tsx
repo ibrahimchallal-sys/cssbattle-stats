@@ -257,7 +257,7 @@ const AdminDashboard = () => {
     try {
       if (!editingPlayer) return;
 
-      const updateData: any = {
+      const updateData: Partial<Player> = {
         full_name: playerData.full_name,
         email: playerData.email,
         cssbattle_profile_link: playerData.css_link || null,
@@ -1292,45 +1292,70 @@ const AdminDashboard = () => {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-battle-purple/5">
-                  <th className="px-4 py-2">Name</th>
-                  <th className="px-4 py-2">Email</th>
-                  <th className="px-4 py-2">Group</th>
-                  <th className="px-4 py-2">Score</th>
-                  <th className="px-4 py-2">Actions</th>
+                  <th className="px-4 py-3 text-left text-foreground/70 font-semibold">
+                    Name
+                  </th>
+                  <th className="px-4 py-3 text-left text-foreground/70 font-semibold">
+                    Email
+                  </th>
+                  <th className="px-4 py-3 text-left text-foreground/70 font-semibold">
+                    Group
+                  </th>
+                  <th className="px-4 py-3 text-left text-foreground/70 font-semibold">
+                    Score
+                  </th>
+                  <th className="px-4 py-3 text-left text-foreground/70 font-semibold">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredPlayers.map((player) => (
-                  <tr key={player.id}>
-                    <td className="px-4 py-2">{player.full_name || "N/A"}</td>
-                    <td className="px-4 py-2">{player.email || "N/A"}</td>
-                    <td className="px-4 py-2">
+                  <tr
+                    key={player.id}
+                    className="border-b border-battle-purple/10 hover:bg-battle-purple/5"
+                  >
+                    <td className="px-4 py-3 align-top">
+                      <div className="font-medium text-foreground">
+                        {player.full_name || "N/A"}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <div className="text-foreground/80 text-sm">
+                        {player.email || "N/A"}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 align-top">
                       {player.group_name ? (
                         <Badge variant="secondary">{player.group_name}</Badge>
                       ) : (
-                        "N/A"
+                        <span className="text-foreground/50">N/A</span>
                       )}
                     </td>
-                    <td className="px-4 py-2">{player.score || 0}</td>
-                    <td className="px-4 py-2">
-                      <div className="flex gap-2">
+                    <td className="px-4 py-3 align-top">
+                      <div className="font-semibold text-foreground">
+                        {player.score || 0}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           onClick={() => handleEditPlayer(player)}
                           variant="outline"
+                          size="sm"
                           className="border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground"
                         >
                           <Edit className="w-4 h-4" />
-                          <span className="hidden sm:inline">Edit</span>
+                          <span className="hidden sm:inline ml-2">Edit</span>
                         </Button>
                         <Button
                           onClick={() => handleSendPasswordReset(player)}
                           variant="outline"
+                          size="sm"
                           className="border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground"
                         >
                           <Key className="w-4 h-4" />
-                          <span className="hidden sm:inline">
-                            Reset Password
-                          </span>
+                          <span className="hidden sm:inline ml-2">Reset</span>
                         </Button>
                         <Button
                           onClick={() => {
@@ -1340,10 +1365,11 @@ const AdminDashboard = () => {
                             });
                           }}
                           variant="outline"
+                          size="sm"
                           className="border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground"
                         >
                           <Trash2 className="w-4 h-4" />
-                          <span className="hidden sm:inline">Delete</span>
+                          <span className="hidden sm:inline ml-2">Delete</span>
                         </Button>
                       </div>
                     </td>

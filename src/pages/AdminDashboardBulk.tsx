@@ -822,28 +822,28 @@ const AdminDashboardBulk = () => {
 
           {/* Players Table */}
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full border-collapse">
               <thead>
-                <tr className="border-b border-primary/20">
+                <tr className="border-b border-primary/20 bg-primary/5">
                   <th className="text-left p-3">
                     <Checkbox
                       checked={selectAll}
                       onCheckedChange={handleSelectAll}
                     />
                   </th>
-                  <th className="text-left p-3 text-foreground/70 font-semibold">
+                  <th className="text-center p-3 text-foreground/70 font-semibold">
                     Name
                   </th>
-                  <th className="text-left p-3 text-foreground/70 font-semibold">
+                  <th className="text-center p-3 text-foreground/70 font-semibold">
                     Email
                   </th>
                   <th className="text-left p-3 text-foreground/70 font-semibold">
                     Group
                   </th>
-                  <th className="text-left p-3 text-foreground/70 font-semibold">
+                  <th className="text-center p-3 text-foreground/70 font-semibold">
                     Score
                   </th>
-                  <th className="text-left p-3 text-foreground/70 font-semibold">
+                  <th className="text-center p-3 text-foreground/70 font-semibold">
                     Actions
                   </th>
                 </tr>
@@ -854,7 +854,7 @@ const AdminDashboardBulk = () => {
                     key={player.id}
                     className="border-b border-primary/10 hover:bg-primary/5"
                   >
-                    <td className="p-3">
+                    <td className="p-3 align-top">
                       <Checkbox
                         checked={selectedPlayers.has(player.id)}
                         onCheckedChange={(checked) =>
@@ -862,20 +862,22 @@ const AdminDashboardBulk = () => {
                         }
                       />
                     </td>
-                    <td className="p-3 text-foreground">{player.full_name}</td>
-                    <td className="p-3 text-foreground/80 text-sm">
-                      {player.email}
+                    <td className="p-3 align-top text-foreground">
+                      <div className="font-medium">{player.full_name}</div>
                     </td>
-                    <td className="p-3">
+                    <td className="p-3 align-top text-foreground/80 text-sm">
+                      <div>{player.email}</div>
+                    </td>
+                    <td className="p-3 align-top">
                       <Badge variant="outline">
                         {player.group_name || "N/A"}
                       </Badge>
                     </td>
-                    <td className="p-3 text-foreground font-semibold">
-                      {player.score?.toFixed(2) || "0.00"}
+                    <td className="p-3 align-top text-foreground font-semibold">
+                      <div>{player.score?.toFixed(2) || "0.00"}</div>
                     </td>
-                    <td className="p-3">
-                      <div className="flex gap-2">
+                    <td className="p-3 align-top">
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           onClick={() => handleEditPlayer(player)}
                           variant="ghost"
