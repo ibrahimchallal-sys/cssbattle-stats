@@ -750,6 +750,9 @@ const Leaderboard = () => {
                             ? currentUserData.score.toLocaleString()
                             : "0"}
                         </div>
+                        <div className="text-sm text-muted-foreground">
+                          {language === "en" ? "Rank" : "Rang"} #{userRank}
+                        </div>
                       </div>
                     </div>
 
