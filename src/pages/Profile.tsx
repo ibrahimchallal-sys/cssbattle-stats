@@ -22,6 +22,7 @@ import {
   Phone,
   Upload,
   Camera,
+  AlertCircle,
 } from "lucide-react";
 import { GROUP_OPTIONS } from "@/constants/groups";
 import {
@@ -43,6 +44,7 @@ interface PlayerProfile {
   score: number | null;
   rank: string | null;
   profile_image_url: string | null;
+  verified_ofppt: boolean | null;
 }
 
 const ProfileNew = () => {
@@ -78,7 +80,7 @@ const ProfileNew = () => {
       const { data, error } = await supabase
         .from("players")
         .select(
-          "id, full_name, email, phone, group_name, cssbattle_profile_link, score, rank, profile_image_url"
+          "id, full_name, email, phone, group_name, cssbattle_profile_link, score, rank, profile_image_url, verified_ofppt"
         )
         .eq("id", user.id)
         .single();
@@ -369,6 +371,39 @@ const ProfileNew = () => {
               </div>
             )}
           </div>
+
+          {/* Verification Message */}
+          {playerProfile?.verified_ofppt === false && (
+            <div className="mb-6 p-4 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
+              <div className="flex items-center mb-2">
+                <AlertCircle className="w-5 h-5 text-yellow-500 mr-2" />
+                <h3 className="text-lg font-bold text-yellow-500">
+                  Profile Not Verified
+                </h3>
+              </div>
+              <p className="text-foreground/80 mb-3">
+                Your profile is currently not verified, which means you won't
+                appear in the leaderboard.
+              </p>
+              <div className="text-sm text-foreground/70">
+                <p className="font-medium mb-2">To get verified:</p>
+                <ol className="list-decimal list-inside space-y-1">
+                  <li>
+                    Go to your CSSBattle profile by clicking the "View Profile"
+                    link below
+                  </li>
+                  <li>
+                    Click the "Edit Profile" button on your CSSBattle profile
+                  </li>
+                  <li>
+                    In your bio section, write the word "ofppt" (without quotes)
+                  </li>
+                  <li>Click "Save" to update your profile</li>
+                  <li>Wait 15 minutes for the verification to process</li>
+                </ol>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-foreground">
