@@ -131,7 +131,7 @@ const Index = () => {
 
       {/* Info Cards */}
       <section className="relative z-10 container mx-auto px-4 pb-8 md:pb-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-6xl mx-auto">
           <Card className="bg-card/50 backdrop-blur-sm border-battle-pink/30 p-4 md:p-6 hover:scale-105 transition-transform hover:shadow-glow-pink">
             <div className="flex flex-col items-center text-center">
               <div className="w-10 h-10 md:w-12 md:h-12 bg-battle-pink rounded-lg flex items-center justify-center mb-3 shadow-glow-pink">
@@ -147,25 +147,6 @@ const Index = () => {
                 {language === "en"
                   ? "Developers competing"
                   : "Développeurs en compétition"}
-              </p>
-            </div>
-          </Card>
-
-          <Card className="bg-card/50 backdrop-blur-sm border-battle-accent/30 p-4 md:p-6 hover:scale-105 transition-transform hover:shadow-glow-accent">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-battle-accent rounded-lg flex items-center justify-center mb-3 shadow-glow-accent">
-                <Code2 className="w-5 h-5 md:w-6 md:h-6 text-background" />
-              </div>
-              <h3 className="text-lg md:text-xl font-bold mb-1 text-foreground">
-                {language === "en" ? "Challenges" : "Défis"}
-              </h3>
-              <p className="text-xl md:text-2xl font-bold text-battle-accent mb-1">
-                50+
-              </p>
-              <p className="text-sm text-foreground/70">
-                {language === "en"
-                  ? "Unique CSS battles"
-                  : "Batailles CSS uniques"}
               </p>
             </div>
           </Card>

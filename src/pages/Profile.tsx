@@ -50,7 +50,9 @@ const ProfileNew = () => {
   const { user, logout } = useAuth();
   const { isAdmin } = useAdmin();
   const [isEditing, setIsEditing] = useState(false);
-  const [playerProfile, setPlayerProfile] = useState<PlayerProfile | null>(null);
+  const [playerProfile, setPlayerProfile] = useState<PlayerProfile | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -75,7 +77,9 @@ const ProfileNew = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("players")
-        .select("id, full_name, email, phone, group_name, cssbattle_profile_link, score, rank, profile_image_url")
+        .select(
+          "id, full_name, email, phone, group_name, cssbattle_profile_link, score, rank, profile_image_url"
+        )
         .eq("id", user.id)
         .single();
 
@@ -98,7 +102,9 @@ const ProfileNew = () => {
     }
   };
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file || !playerProfile?.id) return;
 
@@ -283,12 +289,13 @@ const ProfileNew = () => {
             <ArrowLeft className="w-4 h-4" />
             Back to Home
           </Button>
-          <h1 className="text-3xl font-bold text-center flex-1 text-foreground">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-center flex-1 text-foreground px-2">
             CSS{" "}
             <span className="bg-gradient-primary bg-clip-text text-transparent">
               BATTLE
             </span>{" "}
-            Championship
+            <span className="hidden sm:inline">Championship</span>
+            <span className="hidden xs:inline sm:hidden">Champ.</span>
           </h1>
           <div className="w-24"></div> {/* Spacer for alignment */}
         </div>
@@ -311,6 +318,7 @@ const ProfileNew = () => {
                 <label
                   htmlFor="profile-image-upload"
                   className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center cursor-pointer hover:bg-primary/80 transition-colors shadow-lg"
+                  aria-label="Change profile image"
                 >
                   <Camera className="w-4 h-4 text-white" />
                   <input
@@ -320,6 +328,7 @@ const ProfileNew = () => {
                     onChange={handleImageUpload}
                     className="hidden"
                     disabled={uploadingImage}
+                    aria-label="Upload profile image"
                   />
                 </label>
               )}
@@ -335,18 +344,22 @@ const ProfileNew = () => {
             <p className="text-foreground/80">
               Manage your account information
             </p>
-            {playerProfile?.score !== null && playerProfile?.score !== undefined && (
-              <div className="mt-2 flex items-center justify-center gap-4">
-                <Badge className="bg-gradient-primary">
-                  Score: {playerProfile.score.toFixed(2)}
-                </Badge>
-                {playerProfile?.rank && (
-                  <Badge variant="outline" className="border-battle-purple/50">
-                    Rank: {playerProfile.rank}
+            {playerProfile?.score !== null &&
+              playerProfile?.score !== undefined && (
+                <div className="mt-2 flex items-center justify-center gap-4">
+                  <Badge className="bg-gradient-primary">
+                    Score: {playerProfile.score.toFixed(2)}
                   </Badge>
-                )}
-              </div>
-            )}
+                  {playerProfile?.rank && (
+                    <Badge
+                      variant="outline"
+                      className="border-battle-purple/50"
+                    >
+                      Rank: {playerProfile.rank}
+                    </Badge>
+                  )}
+                </div>
+              )}
             {isAdmin && (
               <div className="mt-2 flex items-center justify-center">
                 <Shield className="w-4 h-4 mr-1 text-battle-accent" />
@@ -404,10 +417,12 @@ const ProfileNew = () => {
               >
                 Email
               </Label>
-              <div className="p-3 bg-background/50 border border-battle-purple/30 rounded-md">
-                <div className="flex items-center">
-                  <Mail className="w-4 h-4 mr-2 text-muted-foreground" />
-                  {playerProfile?.email || "Not provided"}
+              <div className="p-3 bg-background/50 border border-battle-purple/30 rounded-md break-words">
+                <div className="flex items-center flex-wrap">
+                  <Mail className="w-4 h-4 mr-2 text-muted-foreground flex-shrink-0" />
+                  <span className="break-all">
+                    {playerProfile?.email || "Not provided"}
+                  </span>
                 </div>
               </div>
               <p className="text-xs text-foreground/50">
@@ -536,7 +551,8 @@ const ProfileNew = () => {
                       // Reset form data to original values
                       setFormData({
                         fullName: playerProfile?.full_name || "",
-                        cssBattleProfileLink: playerProfile?.cssbattle_profile_link || "",
+                        cssBattleProfileLink:
+                          playerProfile?.cssbattle_profile_link || "",
                         phoneNumber: playerProfile?.phone || "",
                         group: playerProfile?.group_name || "",
                       });
