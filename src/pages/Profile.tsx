@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import FloatingShape from "@/components/FloatingShape";
 import usePreventRightClick from "@/hooks/usePreventRightClick";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   User as UserIcon,
   Mail,
@@ -51,6 +52,7 @@ const ProfileNew = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { isAdmin } = useAdmin();
+  const { t, language } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [playerProfile, setPlayerProfile] = useState<PlayerProfile | null>(
     null
@@ -378,28 +380,26 @@ const ProfileNew = () => {
               <div className="flex items-center mb-2">
                 <AlertCircle className="w-5 h-5 text-yellow-500 mr-2" />
                 <h3 className="text-lg font-bold text-yellow-500">
-                  Profile Not Verified
+                  {t("profile.notVerified.title")}
                 </h3>
               </div>
               <p className="text-foreground/80 mb-3">
-                Your profile is currently not verified, which means you won't
-                appear in the leaderboard.
+                {t("profile.notVerified.message")}
               </p>
               <div className="text-sm text-foreground/70">
-                <p className="font-medium mb-2">To get verified:</p>
+                <p className="font-medium mb-2">{t("profile.notVerified.instructions")}</p>
                 <ol className="list-decimal list-inside space-y-1">
                   <li>
-                    Go to your CSSBattle profile by clicking the "View Profile"
-                    link below
+                    {t("profile.notVerified.step1")}
                   </li>
                   <li>
-                    Click the "Edit Profile" button on your CSSBattle profile
+                    {t("profile.notVerified.step2")}
                   </li>
                   <li>
-                    In your bio section, write the word "ofppt" (without quotes)
+                    {t("profile.notVerified.step3")}
                   </li>
-                  <li>Click "Save" to update your profile</li>
-                  <li>Wait 15 minutes for the verification to process</li>
+                  <li>{t("profile.notVerified.step4")}</li>
+                  <li>{t("profile.notVerified.step5")}</li>
                 </ol>
               </div>
             </div>

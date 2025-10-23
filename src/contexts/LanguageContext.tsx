@@ -146,6 +146,16 @@ const translations = {
     "navbar.register": "S'inscrire",
     "navbar.institute": "Institut Spécialisé de Formation de l'Offshoring",
 
+    // Profile - Verification Message
+    "profile.notVerified.title": "Profile Not Verified",
+    "profile.notVerified.message": "Your profile is currently not verified, which means you won't appear in the leaderboard.",
+    "profile.notVerified.instructions": "To get verified:",
+    "profile.notVerified.step1": "Go to your CSSBattle profile by clicking the \"View Profile\" link below",
+    "profile.notVerified.step2": "Click the \"Edit Profile\" button on your CSSBattle profile",
+    "profile.notVerified.step3": "In your bio section, write the word \"ofppt\" (without quotes)",
+    "profile.notVerified.step4": "Click \"Save\" to update your profile",
+    "profile.notVerified.step5": "Wait 15 minutes for the verification to process",
+
     // Learning Center
     "learning.title": "Centre d'Apprentissage",
     "learning.subtitle":
