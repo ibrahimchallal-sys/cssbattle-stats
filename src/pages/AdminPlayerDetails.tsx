@@ -29,6 +29,7 @@ interface Player {
   phone: string | null;
   created_at: string;
   video_completed: boolean | null;
+  profile_image_url: string | null;
 }
 
 const AdminPlayerDetails = () => {
@@ -133,9 +134,18 @@ const AdminPlayerDetails = () => {
         <Card className="bg-card/50 backdrop-blur-sm border-primary/30 p-6">
           <div className="flex flex-col md:flex-row gap-8">
             <div className="flex-shrink-0">
-              <div className="w-32 h-32 rounded-full bg-gradient-primary flex items-center justify-center mx-auto">
-                <User className="w-16 h-16 text-foreground" />
-              </div>
+              {/* Display player profile image if available, otherwise show default icon */}
+              {player.profile_image_url ? (
+                <img
+                  src={player.profile_image_url}
+                  alt={player.full_name}
+                  className="w-32 h-32 rounded-full object-cover border-2 border-primary/30 mx-auto"
+                />
+              ) : (
+                <div className="w-32 h-32 rounded-full bg-gradient-primary flex items-center justify-center mx-auto">
+                  <User className="w-16 h-16 text-foreground" />
+                </div>
+              )}
             </div>
 
             <div className="flex-1">
