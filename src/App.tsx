@@ -29,6 +29,7 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import { useAuth } from "./contexts/AuthContext";
 import { useAdmin } from "./contexts/AdminContext";
 import { useMessagePanel } from "./hooks/useMessagePanel";
+import TestVideoCompletion from "./pages/TestVideoCompletion";
 
 // Wrapper component that includes global message panels
 const AppContent = () => {
@@ -205,6 +206,15 @@ const AppContent = () => {
             <>
               <Navbar />
               <QuizDebug />
+            </>
+          }
+        />
+        <Route
+          path="/test-video-completion"
+          element={
+            <>
+              <Navbar />
+              <TestVideoCompletion />
             </>
           }
         />

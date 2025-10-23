@@ -65,7 +65,11 @@ const LearningCenter = () => {
     setQuizCompletionChecked(false);
 
     const checkQuizCompletion = async () => {
-      if (!user) return;
+      if (!user) {
+        console.log("No user object available for quiz completion check");
+        setQuizCompletionChecked(true);
+        return;
+      }
 
       // Small delay to ensure user object is fully loaded
       setTimeout(async () => {
@@ -81,7 +85,10 @@ const LearningCenter = () => {
             try {
               const scoreKey = `quiz_score_${user.id}`;
               const savedScore = localStorage.getItem(scoreKey);
-              console.log("Restoring quiz score from localStorage:", savedScore);
+              console.log(
+                "Restoring quiz score from localStorage:",
+                savedScore
+              );
               if (savedScore) {
                 const parsedScore = parseInt(savedScore, 10);
                 if (!isNaN(parsedScore)) {
@@ -135,6 +142,13 @@ const LearningCenter = () => {
           }
         } catch (error) {
           console.error("Failed to check quiz completion:", error);
+          toast({
+            title: "Error",
+            description: `An unexpected error occurred: ${
+              (error as Error).message
+            }.`,
+            variant: "destructive",
+          });
         } finally {
           setQuizCompletionChecked(true);
         }
@@ -146,8 +160,12 @@ const LearningCenter = () => {
 
   // Save quiz score when completed
   useEffect(() => {
-    console.log("Quiz save effect triggered", { quizCompleted, scoreSaved, user });
-    
+    console.log("Quiz save effect triggered", {
+      quizCompleted,
+      scoreSaved,
+      user,
+    });
+
     const saveScore = async (finalScore: number) => {
       // Reset scoreSaved state if there was an error in a previous attempt
       // This allows retrying the save operation
@@ -164,7 +182,7 @@ const LearningCenter = () => {
         });
         return;
       }
-      
+
       // Verify user object has required properties
       if (!user.id) {
         console.error("User object missing ID:", user);
@@ -194,7 +212,7 @@ const LearningCenter = () => {
           });
           return;
         }
-        
+
         console.log("Existing score check result:", existingData);
 
         // If score already exists, don't insert again
@@ -217,7 +235,7 @@ const LearningCenter = () => {
           "score:",
           finalScore
         );
-        
+
         // First, verify that the player exists in the players table
         // If not found, try to create the player record (handles edge cases where registration was incomplete)
         console.log("Verifying player existence for user ID:", user.id);
@@ -226,23 +244,24 @@ const LearningCenter = () => {
           .select("id")
           .eq("id", user.id)
           .single();
-          
-        if (playerError && playerError.code === "PGRST116") { // No rows returned
-          console.warn("Player not found in database, attempting to create player record");
-          
+
+        if (playerError && playerError.code === "PGRST116") {
+          // No rows returned
+          console.warn(
+            "Player not found in database, attempting to create player record"
+          );
+
           // Try to create the player record
-          const { error: insertError } = await supabase
-            .from("players")
-            .insert({
-              id: user.id,
-              email: user.email,
-              full_name: user.full_name || user.email.split('@')[0],
-              score: 0,
-              // Default values for other required fields
-              group_name: "Default",
-              video_completed: false
-            });
-            
+          const { error: insertError } = await supabase.from("players").insert({
+            id: user.id,
+            email: user.email,
+            full_name: user.full_name || user.email.split("@")[0],
+            score: 0,
+            // Default values for other required fields
+            group_name: "Default",
+            video_completed: false,
+          });
+
           if (insertError) {
             console.error("Error creating player record:", insertError);
             toast({
@@ -252,7 +271,7 @@ const LearningCenter = () => {
             });
             return;
           }
-          
+
           console.log("Player record created successfully");
         } else if (playerError) {
           console.error("Error verifying player existence:", playerError);
@@ -263,7 +282,7 @@ const LearningCenter = () => {
           });
           return;
         }
-        
+
         if (!playerData && !(playerError && playerError.code === "PGRST116")) {
           console.error("Player not found in database");
           toast({
@@ -273,9 +292,9 @@ const LearningCenter = () => {
           });
           return;
         }
-        
+
         console.log("Player verification successful");
-        
+
         console.log("Attempting to insert quiz score:", {
           player_id: user.id,
           score: finalScore,
@@ -283,7 +302,7 @@ const LearningCenter = () => {
           quiz_title: "Learning Center Quiz",
           completed_at: new Date().toISOString(),
         });
-        
+
         const { data, error } = await supabase.from("quiz_scores").insert({
           player_id: user.id,
           score: finalScore,
@@ -328,19 +347,36 @@ const LearningCenter = () => {
         console.error("Failed to save quiz score", e);
         toast({
           title: "Error",
-          description: `Failed to save quiz score: ${(e as Error).message}. Please try again.`,
+          description: `Failed to save quiz score: ${
+            (e as Error).message
+          }. Please try again.`,
           variant: "destructive",
         });
       }
     };
 
     if (quizCompleted && !scoreSaved) {
-      console.log("Quiz completed, saving score...", { quizCompleted, scoreSaved, quizScore, user });
+      console.log("Quiz completed, saving score...", {
+        quizCompleted,
+        scoreSaved,
+        quizScore,
+        user,
+      });
       saveScore(quizScore);
     } else if (quizCompleted && scoreSaved) {
-      console.log("Quiz already completed and score saved", { quizCompleted, scoreSaved, quizScore, user });
+      console.log("Quiz already completed and score saved", {
+        quizCompleted,
+        scoreSaved,
+        quizScore,
+        user,
+      });
     } else {
-      console.log("Quiz not completed yet", { quizCompleted, scoreSaved, quizScore, user });
+      console.log("Quiz not completed yet", {
+        quizCompleted,
+        scoreSaved,
+        quizScore,
+        user,
+      });
     }
   }, [quizCompleted, scoreSaved, user]);
 
@@ -561,12 +597,22 @@ const LearningCenter = () => {
   const handleVideoEnd = async () => {
     setIsPlaying(false);
     setVideoCompleted(true);
-    await saveVideoCompletion(); // Save completion status
-    toast({
-      title: t("learning.video.completed"),
-      description: t("learning.video.completedDesc"),
-      duration: 3000,
-    });
+
+    try {
+      await saveVideoCompletion(); // Save completion status
+      toast({
+        title: t("learning.video.completed"),
+        description: t("learning.video.completedDesc"),
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Error in handleVideoEnd:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save video completion. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleVideoReset = () => {
@@ -747,6 +793,7 @@ const LearningCenter = () => {
     const checkVideoCompletion = async () => {
       if (!user) {
         console.log("No user object available for video completion check");
+        setVideoCompletionChecked(true);
         return;
       }
 
@@ -771,6 +818,11 @@ const LearningCenter = () => {
               "Error checking video completion in database:",
               error
             );
+            toast({
+              title: "Error",
+              description: `Failed to check video completion: ${error.message}.`,
+              variant: "destructive",
+            });
             setVideoCompletionChecked(true);
             return;
           }
@@ -786,6 +838,13 @@ const LearningCenter = () => {
           }
         } catch (error) {
           console.error("Failed to check video completion:", error);
+          toast({
+            title: "Error",
+            description: `An unexpected error occurred: ${
+              (error as Error).message
+            }.`,
+            variant: "destructive",
+          });
         } finally {
           setVideoCompletionChecked(true);
         }
@@ -799,6 +858,11 @@ const LearningCenter = () => {
   const saveVideoCompletion = async () => {
     if (!user) {
       console.log("No user available to save video completion");
+      toast({
+        title: "Error",
+        description: "User not authenticated. Please log in and try again.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -814,21 +878,37 @@ const LearningCenter = () => {
 
       if (error) {
         console.error("Failed to save video completion to database:", error);
+        toast({
+          title: "Error",
+          description: `Failed to save video completion: ${error.message}. Please try again.`,
+          variant: "destructive",
+        });
       } else {
         console.log(
           "Video completion status saved to database for user",
           user.id
         );
+        toast({
+          title: "Success",
+          description: "Video completion status saved successfully!",
+        });
       }
     } catch (error) {
       console.error("Failed to save video completion:", error);
+      toast({
+        title: "Error",
+        description: `An unexpected error occurred: ${
+          (error as Error).message
+        }. Please try again.`,
+        variant: "destructive",
+      });
     }
   };
 
   return (
     <div className="min-h-screen bg-background overflow-hidden relative">
       <Navbar />
-      
+
       {/* Animated Background Shapes */}
       <FloatingShape color="purple" size={200} top="10%" left="5%" delay={0} />
       <FloatingShape
@@ -871,8 +951,10 @@ const LearningCenter = () => {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Play className="w-5 h-5 mr-2 text-battle-purple" />
-                  {user?.video_completed 
-                    ? (language === "en" ? "Review Video" : "Revoir la Vidéo")
+                  {user?.video_completed
+                    ? language === "en"
+                      ? "Review Video"
+                      : "Revoir la Vidéo"
                     : t("learning.video.title")}
                   {user?.video_completed && (
                     <CheckCircle className="w-4 h-4 ml-2 text-green-500" />

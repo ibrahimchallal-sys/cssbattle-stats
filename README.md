@@ -13,6 +13,7 @@ The CSS Battle Championship is a competition management system built for CSS Bat
 - **Profile Management**: Update your information and link your CSS Battle profile
 - **Leaderboard**: View real-time rankings of all participants
 - **Learning Center**: Access educational resources to improve your CSS skills
+- **Video Completion Tracking**: Automatic tracking of tutorial video completion
 - **Messaging System**: Receive messages from admins about the championship
 
 ### For Admins
@@ -133,17 +134,20 @@ src/
 │   └── supabase/        # Supabase client and types
 ├── lib/                 # Utility functions
 ├── pages/               # Page components
+│   ├── LearningCenter.tsx    # Learning center with video completion tracking
+│   └── TestVideoCompletion.tsx  # Test component for video completion
 └── App.tsx              # Main application component
 
 supabase/
 ├── migrations/          # Database schema migrations
+│   └── 20251020002115_83a7f800-5ca7-4e3b-bc49-2b0793dde9e3.sql  # Video completion column
 └── functions/           # Supabase functions
 ```
 
 ## 🗃️ Database Schema
 
 The application uses several key tables:
-- `players` - Stores player information
+- `players` - Stores player information including [video_completed](file:///d:/DONNEES/Telechargements/Nouveau%20dossier/cssbattle-stats/supabase/migrations/20251020002115_83a7f800-5ca7-4e3b-bc49-2b0793dde9e3.sql#L11-L11) status
 - `admins` - Stores admin information
 - `learning_resources` - Educational content
 - `contact_messages` - Messaging system
