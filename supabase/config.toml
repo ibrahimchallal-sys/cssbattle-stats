@@ -1,0 +1,4 @@
+project_id = "ubjttptjigwbjwqyiwmi"
+
+[functions.admin-manage-password]
+verify_jwt = false
