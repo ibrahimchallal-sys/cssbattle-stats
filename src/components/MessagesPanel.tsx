@@ -25,6 +25,7 @@ import {
   Check,
   CheckCheck,
   Reply,
+  Search,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/contexts/AdminContext";
@@ -69,7 +70,8 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
     fetchUnreadMessageCount,
   } = useAdmin();
   const [messages, setMessages] = useState<ContactMessage[]>([]);
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]); // Store all players
+  const [players, setPlayers] = useState<Player[]>([]); // Store players who contacted admin
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -77,7 +79,10 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
   const [playerMessages, setPlayerMessages] = useState<ContactMessage[]>([]);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isInputFocused, setIsInputFocused] = useState(false);
-  const [replyToMessage, setReplyToMessage] = useState<ContactMessage | null>(null);
+  const [replyToMessage, setReplyToMessage] = useState<ContactMessage | null>(
+    null
+  );
+  const [playerSearchTerm, setPlayerSearchTerm] = useState(""); // Add player search state
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to latest message
@@ -216,7 +221,7 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
   const fetchAdminContacts = async () => {
     try {
       // Fetch admin contacts from the admins table using the RPC function
-      const { data, error } = await supabase.rpc('get_admin_contacts');
+      const { data, error } = await supabase.rpc("get_admin_contacts");
 
       if (error) {
         console.error("Error fetching admin contacts:", error);
@@ -232,17 +237,52 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
 
   const fetchPlayers = async () => {
     try {
-      // Fetch ALL players from the database, not just those who sent messages
-      const { data, error } = await supabase
+      // Fetch only players who have sent messages to the current admin
+      if (!admin?.email) {
+        setPlayers([]);
+        setAllPlayers([]);
+        return;
+      }
+
+      // First, get all sender IDs from messages sent to this admin
+      const { data: contactMessages, error: messagesError } = await supabase
+        .from("contact_messages")
+        .select("sender_id, sender_name, sender_email")
+        .eq("recipient_email", admin.email);
+
+      if (messagesError) throw messagesError;
+
+      // Get unique sender IDs
+      const senderIds = [
+        ...new Set(contactMessages?.map((msg) => msg.sender_id) || []),
+      ].filter(Boolean);
+
+      if (senderIds.length === 0) {
+        setPlayers([]);
+      } else {
+        // Fetch player details for these senders
+        const { data: playersData, error: playersError } = await supabase
+          .from("players")
+          .select("id, full_name, email, group_name, score, profile_image_url")
+          .in("id", senderIds)
+          .order("full_name", { ascending: true });
+
+        if (playersError) throw playersError;
+        setPlayers(playersData || []);
+      }
+
+      // Fetch all players for search functionality
+      const { data: allPlayersData, error: allPlayersError } = await supabase
         .from("players")
         .select("id, full_name, email, group_name, score, profile_image_url")
         .order("full_name", { ascending: true });
 
-      if (error) throw error;
-      setPlayers(data || []);
+      if (allPlayersError) throw allPlayersError;
+      setAllPlayers(allPlayersData || []);
     } catch (error) {
       console.error("Failed to fetch players:", error);
       setPlayers([]);
+      setAllPlayers([]);
     }
   };
 
@@ -436,8 +476,11 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
       }
 
       // Prepare message data with reply info if replying
-      const messageText = replyToMessage 
-        ? `[Replying to: "${replyToMessage.message.substring(0, 50)}..."] ${newMessage}`
+      const messageText = replyToMessage
+        ? `[Replying to: "${replyToMessage.message.substring(
+            0,
+            50
+          )}..."] ${newMessage}`
         : newMessage;
 
       // For placeholder UUIDs, we set sender_id to null but still set sender_email
@@ -515,6 +558,17 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
     (player, index, self) => index === self.findIndex((p) => p.id === player.id)
   );
 
+  // Filter players based on search term - show all players when searching
+  const filteredPlayers = playerSearchTerm
+    ? allPlayers.filter(
+        (player) =>
+          player.full_name
+            .toLowerCase()
+            .includes(playerSearchTerm.toLowerCase()) ||
+          player.email.toLowerCase().includes(playerSearchTerm.toLowerCase())
+      )
+    : players; // Show only players who contacted admin when not searching
+
   if (!isOpen) return null;
 
   return (
@@ -550,8 +604,27 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
                 </Button>
               </div>
 
-              {/* Filter controls */}
-              <div className="px-4 py-3 border-b border-battle-purple/20">
+              {/* Filter controls with player search */}
+              <div className="px-4 py-3 border-b border-battle-purple/20 space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search players by name..."
+                    value={playerSearchTerm}
+                    onChange={(e) => setPlayerSearchTerm(e.target.value)}
+                    className="pl-10 pr-10 bg-background border-primary/30"
+                  />
+                  {playerSearchTerm && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-1/2 transform -translate-y-1/2 h-6 w-6"
+                      onClick={() => setPlayerSearchTerm("")}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-full bg-background border-primary/30">
                     <SelectValue placeholder="Filter by status" />
@@ -573,14 +646,18 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
                       Loading contacts...
                     </div>
                   </div>
-                ) : uniquePlayers.length === 0 ? (
+                ) : filteredPlayers.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full p-4 text-center">
                     <Users className="w-12 h-12 text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">No contacts found</p>
+                    <p className="text-muted-foreground">
+                      {playerSearchTerm
+                        ? "No players found matching your search"
+                        : "No contacts found"}
+                    </p>
                   </div>
                 ) : (
                   <div className="divide-y divide-battle-purple/10">
-                    {uniquePlayers.map((player) => {
+                    {filteredPlayers.map((player) => {
                       // Get messages for this player
                       // We need to handle both cases:
                       // 1. Messages FROM player TO admin (sender_email = player.email, recipient_email = admin.email)
@@ -737,31 +814,40 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
                       <div className="space-y-4">
                         {playerMessages.map((message, index) => {
                           // Check if we need a date separator
-                          const showDateSeparator = index === 0 || 
-                            new Date(playerMessages[index - 1].created_at).toDateString() !== 
-                            new Date(message.created_at).toDateString();
-                          
+                          const showDateSeparator =
+                            index === 0 ||
+                            new Date(
+                              playerMessages[index - 1].created_at
+                            ).toDateString() !==
+                              new Date(message.created_at).toDateString();
+
                           // Check if this message contains a reply
-                          const replyMatch = message.message.match(/^\[Replying to: "(.*?)"\] (.*)$/);
+                          const replyMatch = message.message.match(
+                            /^\[Replying to: "(.*?)"\] (.*)$/
+                          );
                           const replyText = replyMatch ? replyMatch[1] : null;
-                          const actualMessage = replyMatch ? replyMatch[2] : message.message;
-                          
+                          const actualMessage = replyMatch
+                            ? replyMatch[2]
+                            : message.message;
+
                           return (
                             <div key={message.id}>
                               {/* Date separator */}
                               {showDateSeparator && (
                                 <div className="flex justify-center my-4">
                                   <div className="bg-background/80 backdrop-blur-sm px-3 py-1 rounded-lg text-xs text-muted-foreground border border-border/50 shadow-sm">
-                                    {new Date(message.created_at).toLocaleDateString([], {
-                                      weekday: 'short',
-                                      month: 'short',
-                                      day: 'numeric',
-                                      year: 'numeric'
+                                    {new Date(
+                                      message.created_at
+                                    ).toLocaleDateString([], {
+                                      weekday: "short",
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
                                     })}
                                   </div>
                                 </div>
                               )}
-                              
+
                               <div
                                 className={`flex ${
                                   message.sender_id === admin?.id ||
@@ -780,18 +866,25 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
                                 >
                                   {/* Reply preview if this is a reply */}
                                   {replyText && (
-                                    <div className={`text-xs mb-2 pb-2 pl-2 border-l-4 ${
-                                      message.sender_id === admin?.id || message.sender_email === admin?.email
-                                        ? "border-white/40 text-white/90"
-                                        : "border-battle-purple/40 text-muted-foreground"
-                                    }`}>
+                                    <div
+                                      className={`text-xs mb-2 pb-2 pl-2 border-l-4 ${
+                                        message.sender_id === admin?.id ||
+                                        message.sender_email === admin?.email
+                                          ? "border-white/40 text-white/90"
+                                          : "border-battle-purple/40 text-muted-foreground"
+                                      }`}
+                                    >
                                       <Reply className="w-3 h-3 inline mr-1" />
-                                      {replyText.length > 50 ? replyText.substring(0, 50) + '...' : replyText}
+                                      {replyText.length > 50
+                                        ? replyText.substring(0, 50) + "..."
+                                        : replyText}
                                     </div>
                                   )}
-                                  
-                                  <p className="text-sm break-words whitespace-pre-wrap">{actualMessage}</p>
-                                  
+
+                                  <p className="text-sm break-words whitespace-pre-wrap">
+                                    {actualMessage}
+                                  </p>
+
                                   <div
                                     className={`text-[10px] mt-1 flex items-center justify-between gap-2 ${
                                       message.sender_id === admin?.id ||
@@ -816,7 +909,7 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
                                         )
                                       ) : null}
                                     </div>
-                                    
+
                                     {/* Reply button */}
                                     <Button
                                       size="sm"
@@ -860,8 +953,12 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
                         <div className="flex items-center gap-2 text-sm flex-1 min-w-0">
                           <Reply className="w-4 h-4 text-battle-purple flex-shrink-0" />
                           <div className="flex flex-col min-w-0 flex-1">
-                            <span className="text-xs text-battle-purple font-medium">Replying to message</span>
-                            <span className="truncate text-muted-foreground text-xs">{replyToMessage.message}</span>
+                            <span className="text-xs text-battle-purple font-medium">
+                              Replying to message
+                            </span>
+                            <span className="truncate text-muted-foreground text-xs">
+                              {replyToMessage.message}
+                            </span>
                           </div>
                         </div>
                         <Button
@@ -874,7 +971,7 @@ const MessagesPanel = ({ isOpen, onClose }: MessagesPanelProps) => {
                         </Button>
                       </div>
                     )}
-                    
+
                     <div className="flex gap-2">
                       <Input
                         value={newMessage}

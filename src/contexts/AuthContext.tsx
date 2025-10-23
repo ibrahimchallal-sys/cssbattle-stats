@@ -19,6 +19,7 @@ interface User {
   group_name?: string;
   phone?: string;
   video_completed?: boolean;
+  verified_ofppt?: boolean | null;
 }
 
 interface AuthContextType {
@@ -54,41 +55,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchUserProfile = async (session: Session) => {
     try {
       // Fetch player data with all required fields
-      let { data: profile, error } = await supabase
+      let profileData;
+      const { data: profile, error } = await supabase
         .from("players")
         .select(
-          "id, full_name, email, cssbattle_profile_link, group_name, phone, video_completed"
+          "id, full_name, email, cssbattle_profile_link, group_name, phone, video_completed, verified_ofppt"
         )
         .eq("id", session.user.id)
         .single();
 
       if (error) {
         // If player not found by ID, try to create the player record
-        if (error.code === "PGRST116") { // No rows returned
-          const { error: insertError } = await supabase
-            .from("players")
-            .insert({
-              id: session.user.id,
-              email: session.user.email!,
-              full_name: session.user.email!.split('@')[0],
-              score: 0,
-              group_name: "Default",
-              video_completed: false
-            });
-            
+        if (error.code === "PGRST116") {
+          // No rows returned
+          const { error: insertError } = await supabase.from("players").insert({
+            id: session.user.id,
+            email: session.user.email!,
+            full_name: session.user.email!.split("@")[0],
+            score: 0,
+            group_name: "Default",
+            video_completed: false,
+          });
+
           if (!insertError) {
-            
             // Try fetching the newly created player
             const { data: newProfile, error: newError } = await supabase
               .from("players")
               .select(
-                "id, full_name, email, cssbattle_profile_link, group_name, phone, video_completed"
+                "id, full_name, email, cssbattle_profile_link, group_name, phone, video_completed, verified_ofppt"
               )
               .eq("id", session.user.id)
               .single();
-              
+
             if (!newError && newProfile) {
-              profile = newProfile;
+              profileData = newProfile;
             } else {
               // Return basic user data if still can't fetch
               return {
@@ -106,11 +106,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const { data: emailProfile, error: emailError } = await supabase
             .from("players")
             .select(
-              "id, full_name, email, cssbattle_profile_link, group_name, phone, video_completed"
+              "id, full_name, email, cssbattle_profile_link, group_name, phone, video_completed, verified_ofppt"
             )
             .eq("email", session.user.email)
             .single();
-            
+
           if (emailError) {
             console.error("AuthContext - Error fetching by email:", emailError);
             // Return basic user data if no profile found
@@ -123,24 +123,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               unreadMessageCount: 0,
             };
           }
-          
-          profile = emailProfile;
+
+          profileData = emailProfile;
         }
+      } else {
+        profileData = profile;
       }
 
       // Fetch unread message count for the player
-      const unreadCount = await fetchUnreadMessageCount(profile.email);
+      const profileToUse = profileData || profile;
+      const unreadCount = await fetchUnreadMessageCount(profileToUse.email);
 
       // Return complete user profile with all required fields
       return {
-        id: profile.id,
-        email: profile.email,
-        full_name: profile.full_name || "",
-        cssbattle_profile_link: profile.cssbattle_profile_link || undefined,
+        id: profileToUse.id,
+        email: profileToUse.email,
+        full_name: profileToUse.full_name || "",
+        cssbattle_profile_link:
+          profileToUse.cssbattle_profile_link || undefined,
         email_confirmed_at: session.user.email_confirmed_at,
-        group_name: profile.group_name || undefined,
-        phone: profile.phone || undefined,
-        video_completed: profile.video_completed || false,
+        group_name: profileToUse.group_name || undefined,
+        phone: profileToUse.phone || undefined,
+        video_completed: profileToUse.video_completed || false,
+        verified_ofppt:
+          profileToUse.verified_ofppt !== undefined
+            ? profileToUse.verified_ofppt
+            : null,
         unreadMessageCount: unreadCount,
       };
     } catch (error) {

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * Script to automatically check scores for each player in CSS Battle
+ * Enhanced Script to automatically check scores for each player in CSS Battle
  * This script fetches player scores from the CSS Battle API and updates the database
  * Handles monthly score resets while preserving original CSS Battle scores
  *
- * Usage: node check-player-scores.js
+ * Usage: node check-player-scores-enhanced.js
  */
 
 const fs = require("fs");
@@ -44,20 +44,13 @@ function shouldResetScores(lastResetDate) {
   return currentMonth !== lastResetMonth || currentYear !== lastResetYear;
 }
 
-// Function to calculate monthly score (current score - score at last reset)
-function calculateMonthlyScore(currentScore, baseScore) {
-  // In a real implementation, you might store the base score separately
-  // For now, we'll use a simple approach
-  return Math.max(0, currentScore - (baseScore || 0));
-}
-
 // Mock function to simulate getting players from the database
 // In a real implementation, this would connect to your Supabase database
 async function getPlayersFromDatabase() {
   // Simulate database delay
   await new Promise((resolve) => setTimeout(resolve, 500));
 
-  // Return mock player data with last_reset_date
+  // Return mock player data with last_reset_date and base_score
   // In a real implementation, this would query your actual database
   const now = new Date();
   return [
@@ -66,6 +59,7 @@ async function getPlayersFromDatabase() {
       full_name: "Ibrahim Challal",
       css_battle_username: "ibrahim_css",
       score: 1500,
+      base_score: 1200,
       last_reset_date: now.toISOString().split("T")[0],
     },
     {
@@ -73,6 +67,7 @@ async function getPlayersFromDatabase() {
       full_name: "Moneim Mazgoura",
       css_battle_username: "moneim_css",
       score: 1200,
+      base_score: 1000,
       last_reset_date: now.toISOString().split("T")[0],
     },
     {
@@ -80,6 +75,7 @@ async function getPlayersFromDatabase() {
       full_name: "Hamdi Boumlik",
       css_battle_username: "hamdi_css",
       score: 900,
+      base_score: 0,
       last_reset_date: null,
     },
     {
@@ -87,6 +83,7 @@ async function getPlayersFromDatabase() {
       full_name: "Youness Hlibi",
       css_battle_username: "youness_css",
       score: 750,
+      base_score: 500,
       last_reset_date: now.toISOString().split("T")[0],
     },
     {
@@ -94,6 +91,7 @@ async function getPlayersFromDatabase() {
       full_name: "John Doe",
       css_battle_username: "john_doe_css",
       score: 500,
+      base_score: 0,
       last_reset_date: null,
     },
   ];
@@ -104,23 +102,22 @@ async function getPlayersFromDatabase() {
 async function updatePlayerScoreInDatabase(
   playerId,
   score,
-  shouldReset = false
+  baseScore,
+  resetDate
 ) {
   // Simulate database update delay
   await new Promise((resolve) => setTimeout(resolve, 300));
 
-  if (shouldReset) {
-    console.log(`Reset player ${playerId} score to: ${score} (monthly reset)`);
-  } else {
-    console.log(`Updated player ${playerId} with score: ${score}`);
-  }
+  console.log(`Updated player ${playerId}:`);
+  console.log(`  Leaderboard Score: ${score}`);
+  console.log(`  Base Score: ${baseScore}`);
+  console.log(`  Last Reset Date: ${resetDate}`);
   // In a real implementation, this would execute an actual database update
-  // including updating the last_reset_date field when resetting
 }
 
 async function checkAllPlayerScores() {
-  console.log("CSS Battle Championship - Player Score Checker");
-  console.log("==============================================\n");
+  console.log("CSS Battle Championship - Enhanced Player Score Checker");
+  console.log("=====================================================\n");
 
   try {
     console.log("Fetching players from database...");
@@ -154,25 +151,54 @@ async function checkAllPlayerScores() {
         // Check if we need to reset scores for this player
         const needsReset = shouldResetScores(player.last_reset_date);
 
-        let effectiveScore = currentCssBattleScore;
         if (needsReset) {
           console.log(`  📅 Monthly reset needed for ${player.full_name}`);
-          // For a true reset, we would set the score to the current CSS Battle score
-          // and update the last_reset_date
-          effectiveScore = currentCssBattleScore;
-          console.log(
-            `  Setting score to: ${effectiveScore} (reset to current CSS Battle score)`
+
+          // Calculate new leaderboard score (current CSS Battle score - base score)
+          const newLeaderboardScore = Math.max(
+            0,
+            currentCssBattleScore - (player.base_score || 0)
           );
 
+          console.log(`  Base Score: ${player.base_score || 0}`);
+          console.log(
+            `  New Leaderboard Score: ${newLeaderboardScore} (CSS Battle: ${currentCssBattleScore} - Base: ${
+              player.base_score || 0
+            })`
+          );
+
+          // Update database with new scores and reset date
           console.log(
             `  Updating database for ${player.full_name} with reset...`
           );
-          await updatePlayerScoreInDatabase(player.id, effectiveScore, true);
+          await updatePlayerScoreInDatabase(
+            player.id,
+            newLeaderboardScore,
+            currentCssBattleScore,
+            currentDate
+          );
         } else {
-          // No reset needed, update with current score
-          console.log(`  Setting score to: ${effectiveScore}`);
+          // No reset needed, calculate current leaderboard score
+          const currentLeaderboardScore = Math.max(
+            0,
+            currentCssBattleScore - (player.base_score || 0)
+          );
+
+          console.log(`  Base Score: ${player.base_score || 0}`);
+          console.log(
+            `  Current Leaderboard Score: ${currentLeaderboardScore} (CSS Battle: ${currentCssBattleScore} - Base: ${
+              player.base_score || 0
+            })`
+          );
+
+          // Update database with current scores
           console.log(`  Updating database for ${player.full_name}...`);
-          await updatePlayerScoreInDatabase(player.id, effectiveScore);
+          await updatePlayerScoreInDatabase(
+            player.id,
+            currentLeaderboardScore,
+            player.base_score,
+            player.last_reset_date
+          );
         }
 
         console.log(`  ✅ Successfully processed ${player.full_name}\n`);
@@ -201,4 +227,5 @@ module.exports = {
   fetchPlayerScore,
   getPlayersFromDatabase,
   updatePlayerScoreInDatabase,
+  shouldResetScores,
 };

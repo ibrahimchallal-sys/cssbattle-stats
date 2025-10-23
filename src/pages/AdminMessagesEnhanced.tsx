@@ -49,6 +49,7 @@ const AdminMessagesEnhanced = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [playerSearchTerm, setPlayerSearchTerm] = useState("");
 
   useEffect(() => {
     if (adminLoading) return;
@@ -125,11 +126,12 @@ const AdminMessagesEnhanced = () => {
       msg.sender_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       msg.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
       msg.message.toLowerCase().includes(searchTerm.toLowerCase());
+
     return matchesStatus && matchesSearch;
   });
 
   // Group messages by sender and get unread count
-  const messagesBySender = filteredMessages.reduce((acc, msg) => {
+  let messagesBySender = filteredMessages.reduce((acc, msg) => {
     const existing = acc.find((item) => item.sender_id === msg.sender_id);
     if (existing) {
       existing.messages.push(msg);
@@ -147,11 +149,28 @@ const AdminMessagesEnhanced = () => {
     return acc;
   }, [] as Array<{ sender_id: string; sender_name: string; sender_email: string; messages: ContactMessage[]; unreadCount: number; latestMessage: ContactMessage }>);
 
+  // Filter by player search term if provided
+  if (playerSearchTerm !== "") {
+    messagesBySender = messagesBySender.filter(
+      (sender) =>
+        sender.sender_name
+          .toLowerCase()
+          .includes(playerSearchTerm.toLowerCase()) ||
+        sender.sender_email
+          .toLowerCase()
+          .includes(playerSearchTerm.toLowerCase())
+    );
+  }
+
   // Sort by latest message
   messagesBySender.sort(
     (a, b) =>
-      new Date(b.latestMessage.updated_at || b.latestMessage.created_at).getTime() -
-      new Date(a.latestMessage.updated_at || a.latestMessage.created_at).getTime()
+      new Date(
+        b.latestMessage.updated_at || b.latestMessage.created_at
+      ).getTime() -
+      new Date(
+        a.latestMessage.updated_at || a.latestMessage.created_at
+      ).getTime()
   );
 
   if (loading) {
@@ -208,23 +227,54 @@ const AdminMessagesEnhanced = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search messages..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-background border-primary/30"
+                  placeholder="Search players by name..."
+                  value={playerSearchTerm}
+                  onChange={(e) => setPlayerSearchTerm(e.target.value)}
+                  className="pl-10 pr-10 bg-background border-primary/30"
                 />
+                {playerSearchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-1/2 transform -translate-y-1/2 h-6 w-6"
+                    onClick={() => setPlayerSearchTerm("")}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full bg-background border-primary/30">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="unread">Unread</SelectItem>
-                  <SelectItem value="read">Read</SelectItem>
-                  <SelectItem value="replied">Replied</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search messages..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-10 bg-background border-primary/30 text-sm h-9"
+                  />
+                  {searchTerm && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-1/2 transform -translate-y-1/2 h-5 w-5"
+                      onClick={() => setSearchTerm("")}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full bg-background border-primary/30 text-sm h-9">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="unread">Unread</SelectItem>
+                    <SelectItem value="read">Read</SelectItem>
+                    <SelectItem value="replied">Replied</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Messages content */}

@@ -21,6 +21,7 @@ import {
   Target,
   Users,
   AlertCircle,
+  Info,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -237,6 +238,11 @@ const Leaderboard = () => {
                   ? "CSS Battle Championship"
                   : "Championnat CSS Battle"}
               </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {language === "en"
+                  ? "Scores reset monthly while preserving CSS Battle progress"
+                  : "Les scores sont réinitialisés mensuellement tout en préservant la progression CSS Battle"}
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center">
@@ -258,6 +264,100 @@ const Leaderboard = () => {
               </Button>
             </div>
           </div>
+
+          {/* Monthly Reset Info */}
+          <Card className="mb-6 bg-primary/5 border-primary/20">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-2">
+                <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {language === "en"
+                      ? "Monthly Leaderboard Reset"
+                      : "Réinitialisation Mensuelle du Classement"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {language === "en"
+                      ? "Leaderboard scores are reset on the 1st of each month to ensure fair competition. Your CSS Battle progress is always preserved."
+                      : "Les scores du classement sont réinitialisés le 1er de chaque mois pour assurer une compétition équitable. Votre progression CSS Battle est toujours préservée."}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Message for unverified players - Moved to top */}
+          {user &&
+            (user.verified_ofppt === false || user.verified_ofppt === null) && (
+              <Card className="bg-red-500/10 backdrop-blur-sm border-red-500/30 mb-6">
+                <CardContent className="p-6">
+                  <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-foreground mb-3 text-center">
+                    {language === "en"
+                      ? "⚠️ You Will Never Appear on the Leaderboard"
+                      : "⚠️ Vous n'apparaîtrez jamais sur le classement"}
+                  </h3>
+                  <p className="text-foreground/90 mb-4 text-center font-medium">
+                    {language === "en"
+                      ? "Your account is not verified as an OFPPT student. To fix this:"
+                      : "Votre compte n'est pas vérifié en tant qu'étudiant OFPPT. Pour corriger ceci :"}
+                  </p>
+                  <div className="bg-card/50 rounded-lg p-4 mb-4 text-left space-y-3">
+                    <div className="flex items-start">
+                      <span className="font-bold text-primary mr-2">1.</span>
+                      <p className="text-foreground/80">
+                        {language === "en"
+                          ? "Click on your "
+                          : "Cliquez sur votre "}
+                        {user.cssbattle_profile_link ? (
+                          <a
+                            href={user.cssbattle_profile_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline font-medium"
+                          >
+                            {language === "en"
+                              ? "CSS Battle profile link"
+                              : "lien de profil CSS Battle"}
+                          </a>
+                        ) : (
+                          <span>
+                            {language === "en"
+                              ? "CSS Battle profile link below"
+                              : "lien de profil CSS Battle ci-dessous"}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="font-bold text-primary mr-2">2.</span>
+                      <p className="text-foreground/80">
+                        {language === "en"
+                          ? "Click on 'Edit Profile' button"
+                          : "Cliquez sur le bouton 'Modifier le profil'"}
+                      </p>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="font-bold text-primary mr-2">3.</span>
+                      <p className="text-foreground/80">
+                        {language === "en"
+                          ? "In your bio section, write ONLY the word: "
+                          : "Dans la section bio, écrivez UNIQUEMENT le mot : "}
+                        <span className="font-bold text-primary">'ofppt'</span>
+                      </p>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="font-bold text-primary mr-2">4.</span>
+                      <p className="text-foreground/80">
+                        {language === "en"
+                          ? "Click 'Save' and return to the platform and wait 15 minutes to see the changes"
+                          : "Cliquez sur 'Enregistrer' et retournez sur la plateforme et attendez 15 minutes pour voir les changements"}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
           {/* Group Filter */}
           <div className="mb-6 w-48">
@@ -669,80 +769,6 @@ const Leaderboard = () => {
               )}
             </>
           )}
-
-          {/* Message for unverified players - REMOVED as per requirement */}
-
-          {user &&
-            currentUserData &&
-            currentUserData.verified_ofppt === true && (
-              <Card className="bg-red-500/10 backdrop-blur-sm border-red-500/30 mt-6">
-                <CardContent className="p-6">
-                  <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-foreground mb-3 text-center">
-                    {language === "en"
-                      ? "⚠️ You Will Never Appear on the Leaderboard"
-                      : "⚠️ Vous n'apparaîtrez jamais sur le classement"}
-                  </h3>
-                  <p className="text-foreground/90 mb-4 text-center font-medium">
-                    {language === "en"
-                      ? "Your account is not verified as an OFPPT student. To fix this:"
-                      : "Votre compte n'est pas vérifié en tant qu'étudiant OFPPT. Pour corriger ceci :"}
-                  </p>
-                  <div className="bg-card/50 rounded-lg p-4 mb-4 text-left space-y-3">
-                    <div className="flex items-start">
-                      <span className="font-bold text-primary mr-2">1.</span>
-                      <p className="text-foreground/80">
-                        {language === "en"
-                          ? "Click on your CSS Battle profile link below"
-                          : "Cliquez sur votre lien de profil CSS Battle ci-dessous"}
-                      </p>
-                    </div>
-                    <div className="flex items-start">
-                      <span className="font-bold text-primary mr-2">2.</span>
-                      <p className="text-foreground/80">
-                        {language === "en"
-                          ? "Click on 'Edit Profile' button"
-                          : "Cliquez sur le bouton 'Modifier le profil'"}
-                      </p>
-                    </div>
-                    <div className="flex items-start">
-                      <span className="font-bold text-primary mr-2">3.</span>
-                      <p className="text-foreground/80">
-                        {language === "en"
-                          ? "In your bio section, write ONLY the word: "
-                          : "Dans la section bio, écrivez UNIQUEMENT le mot : "}
-                        <span className="font-bold text-primary">'ofppt'</span>
-                      </p>
-                    </div>
-                    <div className="flex items-start">
-                      <span className="font-bold text-primary mr-2">4.</span>
-                      <p className="text-foreground/80">
-                        {language === "en"
-                          ? "Click 'Save' and wait 15 minutes to see the changes"
-                          : "Cliquez sur 'Enregistrer' et attendez 15 minutes pour voir les changements"}
-                      </p>
-                    </div>
-                  </div>
-                  {currentUserData.cssbattle_profile_link && (
-                    <div className="text-center">
-                      <Button
-                        onClick={() =>
-                          window.open(
-                            currentUserData.cssbattle_profile_link!,
-                            "_blank"
-                          )
-                        }
-                        className="bg-gradient-to-r from-primary to-accent hover:scale-105 transition-transform shadow-lg"
-                      >
-                        {language === "en"
-                          ? "Go to CSS Battle Profile"
-                          : "Aller au profil CSS Battle"}
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
         </div>
       </main>
     </div>

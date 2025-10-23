@@ -162,24 +162,45 @@ const AdminDashboard = () => {
 
   const fetchPlayers = async () => {
     try {
-      // Fetch players
-      const { data, error } = await supabase
-        .from("players")
-        .select("*")
-        .order("created_at", { ascending: false });
+      // Fetch players who have sent messages
+      const { data: messageSenders, error: messagesError } = await supabase
+        .from("contact_messages")
+        .select("sender_id");
 
-      if (error) {
-        throw error;
+      if (messagesError) {
+        throw messagesError;
       }
 
-      setPlayers(data || []);
+      // Get unique sender IDs
+      const senderIds = [
+        ...new Set(messageSenders?.map((msg) => msg.sender_id) || []),
+      ];
+
+      // Fetch players who have sent messages
+      let playersData = [];
+      if (senderIds.length > 0) {
+        const { data, error } = await supabase
+          .from("players")
+          .select("*")
+          .in("id", senderIds)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        playersData = data || [];
+      }
+
+      setPlayers(playersData);
 
       // Update counts
-      setPlayerCount(data?.length || 0);
+      setPlayerCount(playersData.length);
 
       // Count players with CSS Battle links
       const cssBattleCount =
-        data?.filter((player) => player.cssbattle_profile_link)?.length || 0;
+        playersData?.filter((player) => player.cssbattle_profile_link)
+          ?.length || 0;
       setCssBattleLinkCount(cssBattleCount);
     } catch (err) {
       setError("Failed to fetch players");
@@ -971,7 +992,7 @@ const AdminDashboard = () => {
         isOpen={isMessagesPanelOpen}
         onClose={() => setIsMessagesPanelOpen(false)}
       />
-      
+
       {/* Animated Background Shapes */}
       <FloatingShape color="purple" size={280} top="5%" left="85%" delay={0} />
       <FloatingShape
@@ -1028,7 +1049,7 @@ const AdminDashboard = () => {
               <Users className="w-8 h-8 text-battle-purple mr-4" />
               <div>
                 <p className="text-sm font-medium text-foreground/80">
-                  Total Players
+                  Players with Messages
                 </p>
                 <p className="text-2xl font-bold text-foreground">
                   {playerCount}
@@ -1057,7 +1078,7 @@ const AdminDashboard = () => {
             <div className="relative flex-1 max-w-2xl">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <Input
-                placeholder="Search players by name or email..."
+                placeholder="Search players with messages by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 bg-background/50 border-battle-purple/30 h-12"
@@ -1331,7 +1352,6 @@ const AdminDashboard = () => {
               </tbody>
             </table>
           </div>
-
         </Card>
 
         {/* Delete Confirmation Modal */}
@@ -1663,15 +1683,19 @@ const AdminDashboard = () => {
             setEditingPlayer(null);
           }}
           onSave={handleSavePlayer}
-          player={editingPlayer ? {
-            id: editingPlayer.id,
-            full_name: editingPlayer.full_name,
-            email: editingPlayer.email,
-            phone: editingPlayer.phone || "",
-            css_link: editingPlayer.cssbattle_profile_link || "",
-            group_name: editingPlayer.group_name || "",
-            score: editingPlayer.score || 0,
-          } : null}
+          player={
+            editingPlayer
+              ? {
+                  id: editingPlayer.id,
+                  full_name: editingPlayer.full_name,
+                  email: editingPlayer.email,
+                  phone: editingPlayer.phone || "",
+                  css_link: editingPlayer.cssbattle_profile_link || "",
+                  group_name: editingPlayer.group_name || "",
+                  score: editingPlayer.score || 0,
+                }
+              : null
+          }
           mode="edit"
         />
       </div>
@@ -1680,5 +1704,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-
-
