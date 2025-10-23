@@ -837,7 +837,7 @@ const AdminDashboardBulk = () => {
                   <th className="text-center p-3 text-foreground/70 font-semibold">
                     Email
                   </th>
-                  <th className="text-left p-3 text-foreground/70 font-semibold">
+                  <th className="text-center p-3 text-foreground/70 font-semibold">
                     Group
                   </th>
                   <th className="text-center p-3 text-foreground/70 font-semibold">
@@ -862,22 +862,24 @@ const AdminDashboardBulk = () => {
                         }
                       />
                     </td>
-                    <td className="p-3 align-top text-foreground">
+                    <td className="p-3 align-top text-center">
                       <div className="font-medium">{player.full_name}</div>
                     </td>
-                    <td className="p-3 align-top text-foreground/80 text-sm">
+                    <td className="p-3 align-top text-center">
                       <div>{player.email}</div>
                     </td>
-                    <td className="p-3 align-top">
+                    <td className="p-3 align-top text-center">
                       <Badge variant="outline">
                         {player.group_name || "N/A"}
                       </Badge>
                     </td>
-                    <td className="p-3 align-top text-foreground font-semibold">
-                      <div>{player.score?.toFixed(2) || "0.00"}</div>
+                    <td className="p-3 align-top text-center">
+                      <div className="font-semibold">
+                        {player.score?.toFixed(2) || "0.00"}
+                      </div>
                     </td>
-                    <td className="p-3 align-top">
-                      <div className="flex flex-wrap gap-2">
+                    <td className="p-3 align-top text-center">
+                      <div className="flex flex-wrap gap-2 justify-center">
                         <Button
                           onClick={() => handleEditPlayer(player)}
                           variant="ghost"

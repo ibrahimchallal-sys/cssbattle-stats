@@ -1292,19 +1292,19 @@ const AdminDashboard = () => {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-battle-purple/5">
-                  <th className="px-4 py-3 text-left text-foreground/70 font-semibold">
+                  <th className="px-4 py-3 text-center text-foreground/70 font-semibold">
                     Name
                   </th>
-                  <th className="px-4 py-3 text-left text-foreground/70 font-semibold">
+                  <th className="px-4 py-3 text-center text-foreground/70 font-semibold">
                     Email
                   </th>
-                  <th className="px-4 py-3 text-left text-foreground/70 font-semibold">
+                  <th className="px-4 py-3 text-center text-foreground/70 font-semibold">
                     Group
                   </th>
-                  <th className="px-4 py-3 text-left text-foreground/70 font-semibold">
+                  <th className="px-4 py-3 text-center text-foreground/70 font-semibold">
                     Score
                   </th>
-                  <th className="px-4 py-3 text-left text-foreground/70 font-semibold">
+                  <th className="px-4 py-3 text-center text-foreground/70 font-semibold">
                     Actions
                   </th>
                 </tr>
@@ -1315,30 +1315,30 @@ const AdminDashboard = () => {
                     key={player.id}
                     className="border-b border-battle-purple/10 hover:bg-battle-purple/5"
                   >
-                    <td className="px-4 py-3 align-top">
+                    <td className="px-4 py-3 align-top text-center">
                       <div className="font-medium text-foreground">
                         {player.full_name || "N/A"}
                       </div>
                     </td>
-                    <td className="px-4 py-3 align-top">
+                    <td className="px-4 py-3 align-top text-center">
                       <div className="text-foreground/80 text-sm">
                         {player.email || "N/A"}
                       </div>
                     </td>
-                    <td className="px-4 py-3 align-top">
+                    <td className="px-4 py-3 align-top text-center">
                       {player.group_name ? (
                         <Badge variant="secondary">{player.group_name}</Badge>
                       ) : (
                         <span className="text-foreground/50">N/A</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 align-top">
+                    <td className="px-4 py-3 align-top text-center">
                       <div className="font-semibold text-foreground">
                         {player.score || 0}
                       </div>
                     </td>
-                    <td className="px-4 py-3 align-top">
-                      <div className="flex flex-wrap gap-2">
+                    <td className="px-4 py-3 align-top text-center">
+                      <div className="flex flex-wrap gap-2 justify-center">
                         <Button
                           onClick={() => handleEditPlayer(player)}
                           variant="outline"
