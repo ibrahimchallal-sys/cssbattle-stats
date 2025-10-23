@@ -61,29 +61,37 @@ const Index = () => {
     <main className="min-h-screen bg-background overflow-hidden relative font-heading">
       <Navbar />
       {/* Animated Background Shapes */}
-      <FloatingShape color="purple" size={300} top="15%" left="5%" delay={0} />
-      <FloatingShape
-        color="pink"
-        size={200}
-        top="65%"
-        left="80%"
-        delay={1}
-        rotation
-      />
-      <FloatingShape
-        color="yellow"
-        size={150}
-        top="35%"
-        left="75%"
-        delay={0.5}
-      />
-      <FloatingShape
-        color="purple"
-        size={100}
-        top="85%"
-        left="15%"
-        delay={1.5}
-      />
+      <div className="hidden sm:block">
+        <FloatingShape
+          color="purple"
+          size={300}
+          top="15%"
+          left="5%"
+          delay={0}
+        />
+        <FloatingShape
+          color="pink"
+          size={200}
+          top="65%"
+          left="80%"
+          delay={1}
+          rotation
+        />
+        <FloatingShape
+          color="yellow"
+          size={150}
+          top="35%"
+          left="75%"
+          delay={0.5}
+        />
+        <FloatingShape
+          color="purple"
+          size={100}
+          top="85%"
+          left="15%"
+          delay={1.5}
+        />
+      </div>
 
       {/* Hero Section */}
       <section className="relative z-10 container mx-auto px-4 py-24 md:py-32">
@@ -97,7 +105,7 @@ const Index = () => {
           </div>
 
           {/* Main Title */}
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 md:mb-8 leading-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold mb-6 md:mb-8 leading-tight">
             <span className="block text-foreground">CSS</span>
             <span className="block bg-gradient-primary bg-clip-text text-transparent">
               BATTLE

@@ -106,11 +106,13 @@ const Navbar = () => {
   const getPlayerNavLinks = () => [
     { name: t("navbar.home"), href: "/" },
     { name: t("navbar.leaderboard"), href: "/leaderboard" },
+    { name: t("navbar.learning"), href: "/learning" }, // Added Learning Center link
   ];
 
   const getAdminNavLinks = () => [
     { name: t("navbar.home"), href: "/" },
     { name: t("navbar.leaderboard"), href: "/leaderboard" },
+    { name: t("navbar.learning"), href: "/learning" }, // Added Learning Center link
   ];
 
   const navLinks = isAdmin
@@ -137,24 +139,37 @@ const Navbar = () => {
                   className="h-10 w-auto"
                 />
               </div>
-            <div className="ml-2 min-w-0">
+              <div className="ml-2 min-w-0">
                 <div className="text-xs font-medium text-foreground flex flex-col rounded-lg py-1 px-2 text-left">
-                  {"Institut Spécialisé de Formation de l'Offshoring".split(" ").length > 3 ? (
+                  {"Institut Spécialisé de Formation de l'Offshoring".split(" ")
+                    .length > 3 ? (
                     <>
                       <span className="leading-tight truncate">
-                        {"Institut Spécialisé de Formation de l'Offshoring".split(" ").slice(0, 2).join(" ")}
+                        {"Institut Spécialisé de Formation de l'Offshoring"
+                          .split(" ")
+                          .slice(0, 2)
+                          .join(" ")}
                       </span>
                       <span className="leading-tight truncate">
-                        {"Institut Spécialisé de Formation de l'Offshoring".split(" ").slice(2).join(" ")}
+                        {"Institut Spécialisé de Formation de l'Offshoring"
+                          .split(" ")
+                          .slice(2)
+                          .join(" ")}
                       </span>
                     </>
                   ) : (
                     <>
                       <span className="text-[11px] leading-tight truncate">
-                        {"Institut Spécialisé de Formation de l'Offshoring".split(" ").slice(0, 3).join(" ")}
+                        {"Institut Spécialisé de Formation de l'Offshoring"
+                          .split(" ")
+                          .slice(0, 3)
+                          .join(" ")}
                       </span>
                       <span className="text-[11px] leading-tight truncate">
-                        {"Institut Spécialisé de Formation de l'Offshoring".split(" ").slice(3).join(" ")}
+                        {"Institut Spécialisé de Formation de l'Offshoring"
+                          .split(" ")
+                          .slice(3)
+                          .join(" ")}
                       </span>
                     </>
                   )}
@@ -371,22 +386,35 @@ const Navbar = () => {
               className="h-10 w-auto"
             />
             <div className="ml-3 text-sm font-medium text-foreground flex flex-col justify-center text-left">
-              {"Institut Spécialisé de Formation de l'Offshoring".split(" ").length > 3 ? (
+              {"Institut Spécialisé de Formation de l'Offshoring".split(" ")
+                .length > 3 ? (
                 <>
                   <span>
-                    {"Institut Spécialisé de Formation de l'Offshoring".split(" ").slice(0, 2).join(" ")}
+                    {"Institut Spécialisé de Formation de l'Offshoring"
+                      .split(" ")
+                      .slice(0, 2)
+                      .join(" ")}
                   </span>
                   <span>
-                    {"Institut Spécialisé de Formation de l'Offshoring".split(" ").slice(2).join(" ")}
+                    {"Institut Spécialisé de Formation de l'Offshoring"
+                      .split(" ")
+                      .slice(2)
+                      .join(" ")}
                   </span>
                 </>
               ) : (
                 <>
                   <span className="text-[13px]">
-                    {"Institut Spécialisé de Formation de l'Offshoring".split(" ").slice(0, 3).join(" ")}
+                    {"Institut Spécialisé de Formation de l'Offshoring"
+                      .split(" ")
+                      .slice(0, 3)
+                      .join(" ")}
                   </span>
                   <span className="text-[13px]">
-                    {"Institut Spécialisé de Formation de l'Offshoring".split(" ").slice(3).join(" ")}
+                    {"Institut Spécialisé de Formation de l'Offshoring"
+                      .split(" ")
+                      .slice(3)
+                      .join(" ")}
                   </span>
                 </>
               )}

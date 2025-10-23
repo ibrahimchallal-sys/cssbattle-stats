@@ -97,12 +97,15 @@ const AdminDashboardBulk = () => {
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
 
   // Bulk selection state
-  const [selectedPlayers, setSelectedPlayers] = useState<Set<string>>(new Set());
+  const [selectedPlayers, setSelectedPlayers] = useState<Set<string>>(
+    new Set()
+  );
   const [selectAll, setSelectAll] = useState(false);
   const [bulkAction, setBulkAction] = useState<string>("");
   const [showBulkConfirmation, setShowBulkConfirmation] = useState(false);
   const [bulkOperationInProgress, setBulkOperationInProgress] = useState(false);
-  const [bulkOperationResult, setBulkOperationResult] = useState<BulkOperationResult | null>(null);
+  const [bulkOperationResult, setBulkOperationResult] =
+    useState<BulkOperationResult | null>(null);
 
   // Advanced filter states
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -125,6 +128,14 @@ const AdminDashboardBulk = () => {
   // State for create player form
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    full_name: "",
+    email: "",
+    group_name: "",
+    password: "",
+    phone: "",
+    cssbattle_profile_link: "",
+  });
 
   // State for password change modal
   const [passwordModal, setPasswordModal] = useState<{
@@ -197,14 +208,112 @@ const AdminDashboardBulk = () => {
 
       if (error) throw new Error(error.message);
 
-      setSuccess(
-        `Password reset email sent to ${player.email} successfully!`
-      );
+      setSuccess(`Password reset email sent to ${player.email} successfully!`);
       setTimeout(() => setSuccess(null), 5000);
     } catch (err) {
-      setError("Failed to send password reset email: " + (err as Error).message);
+      setError(
+        "Failed to send password reset email: " + (err as Error).message
+      );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreatePlayer = async (playerData: PlayerFormData) => {
+    if (
+      !playerData.full_name ||
+      !playerData.email ||
+      !playerData.group_name ||
+      !playerData.password
+    ) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCreating(true);
+
+    try {
+      // First, sign up the user with Supabase Auth
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: playerData.email,
+        password: playerData.password,
+        options: {
+          data: {
+            full_name: playerData.full_name,
+          },
+          emailRedirectTo: `${window.location.origin}/login`,
+        },
+      });
+
+      if (signUpError) {
+        throw new Error(signUpError.message);
+      }
+
+      if (data.user) {
+        // Check if CSS Battle link is already used by another player
+        if (playerData.css_link) {
+          const { data: existingPlayers, error: checkError } = await supabase
+            .from("players")
+            .select("id, full_name")
+            .eq("cssbattle_profile_link", playerData.css_link);
+
+          if (checkError) {
+            throw new Error(`Database error: ${checkError.message}`);
+          }
+
+          if (existingPlayers && existingPlayers.length > 0) {
+            throw new Error(
+              "CSS Battle link is already in use by another player"
+            );
+          }
+        }
+
+        // Insert user data into players table
+        const { error: insertError } = await supabase.from("players").insert([
+          {
+            id: data.user.id,
+            full_name: playerData.full_name,
+            email: playerData.email,
+            cssbattle_profile_link: playerData.css_link || null,
+            group_name: playerData.group_name,
+            phone: playerData.phone || null,
+            score: playerData.score || 0,
+          },
+        ]);
+
+        if (insertError) {
+          throw new Error(insertError.message);
+        }
+
+        toast({
+          title: "Success",
+          description: "Player account created successfully!",
+        });
+
+        setIsCreateModalOpen(false);
+        setCreateForm({
+          full_name: "",
+          email: "",
+          group_name: "",
+          password: "",
+          phone: "",
+          cssbattle_profile_link: "",
+        });
+        fetchPlayers(); // Refresh the player list
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description:
+          "Failed to create player account: " + (err as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -212,7 +321,7 @@ const AdminDashboardBulk = () => {
     try {
       if (!editingPlayer) return;
 
-      const updateData: any = {
+      const updateData: Partial<Player> = {
         full_name: playerData.full_name,
         email: playerData.email,
         cssbattle_profile_link: playerData.css_link || null,
@@ -283,7 +392,9 @@ const AdminDashboardBulk = () => {
 
       if (error) {
         if (error.code === "42501") {
-          throw new Error("Permission denied. You may not have the required permissions.");
+          throw new Error(
+            "Permission denied. You may not have the required permissions."
+          );
         }
         throw new Error(`Failed to delete player: ${error.message}`);
       }
@@ -349,7 +460,7 @@ const AdminDashboardBulk = () => {
       selectedPlayers.has(p.id)
     );
 
-    let result: BulkOperationResult = {
+    const result: BulkOperationResult = {
       success: 0,
       failed: 0,
       errors: [],
@@ -396,7 +507,15 @@ const AdminDashboardBulk = () => {
         }
       } else if (bulkAction === "export") {
         const csvContent = [
-          ["Name", "Email", "Group", "Score", "Phone", "CSS Battle Link", "Created At"],
+          [
+            "Name",
+            "Email",
+            "Group",
+            "Score",
+            "Phone",
+            "CSS Battle Link",
+            "Created At",
+          ],
           ...selectedPlayersList.map((p) => [
             p.full_name,
             p.email,
@@ -414,7 +533,9 @@ const AdminDashboardBulk = () => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `players-export-${new Date().toISOString().split("T")[0]}.csv`;
+        a.download = `players-export-${
+          new Date().toISOString().split("T")[0]
+        }.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -454,12 +575,10 @@ const AdminDashboardBulk = () => {
       scoreMax === "" || (player.score || 0) <= parseFloat(scoreMax);
 
     const matchesDateFrom =
-      dateFrom === "" ||
-      new Date(player.created_at) >= new Date(dateFrom);
+      dateFrom === "" || new Date(player.created_at) >= new Date(dateFrom);
 
     const matchesDateTo =
-      dateTo === "" ||
-      new Date(player.created_at) <= new Date(dateTo);
+      dateTo === "" || new Date(player.created_at) <= new Date(dateTo);
 
     return (
       matchesSearch &&
@@ -488,14 +607,29 @@ const AdminDashboardBulk = () => {
   return (
     <div className="min-h-screen bg-background overflow-hidden relative">
       <FloatingShape color="purple" size={220} top="8%" left="85%" delay={0} />
-      <FloatingShape color="pink" size={160} top="75%" left="10%" delay={1} rotation />
-      <FloatingShape color="yellow" size={110} top="45%" left="80%" delay={0.5} />
+      <FloatingShape
+        color="pink"
+        size={160}
+        top="75%"
+        left="10%"
+        delay={1}
+        rotation
+      />
+      <FloatingShape
+        color="yellow"
+        size={110}
+        top="45%"
+        left="80%"
+        delay={0.5}
+      />
 
       <Navbar />
 
       <div className="container mx-auto px-4 py-8 mt-20 relative z-10">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
+          <h1 className="text-3xl font-bold text-foreground">
+            Admin Dashboard
+          </h1>
           <div className="flex gap-2">
             <Button
               onClick={() => navigate("/admin/quiz-records")}
@@ -532,8 +666,8 @@ const AdminDashboardBulk = () => {
           <Card className="mb-6 p-4 bg-card/80 border-primary/30">
             <h3 className="font-semibold mb-2">Bulk Operation Results</h3>
             <p className="text-sm text-foreground/80">
-              ✓ Successful: {bulkOperationResult.success} |
-              ✗ Failed: {bulkOperationResult.failed}
+              ✓ Successful: {bulkOperationResult.success} | ✗ Failed:{" "}
+              {bulkOperationResult.failed}
             </p>
             {bulkOperationResult.errors.length > 0 && (
               <details className="mt-2">
@@ -566,7 +700,9 @@ const AdminDashboardBulk = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-foreground/70 text-sm mb-1">Total Players</p>
-                <p className="text-3xl font-bold text-foreground">{playerCount}</p>
+                <p className="text-3xl font-bold text-foreground">
+                  {playerCount}
+                </p>
               </div>
               <Users className="w-12 h-12 text-battle-purple" />
             </div>
@@ -575,8 +711,12 @@ const AdminDashboardBulk = () => {
           <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-foreground/70 text-sm mb-1">CSS Battle Links</p>
-                <p className="text-3xl font-bold text-foreground">{cssBattleLinkCount}</p>
+                <p className="text-foreground/70 text-sm mb-1">
+                  CSS Battle Links
+                </p>
+                <p className="text-3xl font-bold text-foreground">
+                  {cssBattleLinkCount}
+                </p>
               </div>
               <Link className="w-12 h-12 text-battle-accent" />
             </div>
@@ -586,7 +726,9 @@ const AdminDashboardBulk = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-foreground/70 text-sm mb-1">Selected</p>
-                <p className="text-3xl font-bold text-foreground">{selectedPlayers.size}</p>
+                <p className="text-3xl font-bold text-foreground">
+                  {selectedPlayers.size}
+                </p>
               </div>
               <Target className="w-12 h-12 text-yellow-500" />
             </div>
@@ -598,6 +740,14 @@ const AdminDashboardBulk = () => {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <h2 className="text-2xl font-bold text-foreground">Players</h2>
             <div className="flex gap-2 flex-wrap">
+              <Button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
+                disabled={loading}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create Player
+              </Button>
               <Button
                 onClick={() => setIsImportModalOpen(true)}
                 variant="outline"
@@ -681,16 +831,29 @@ const AdminDashboardBulk = () => {
                       onCheckedChange={handleSelectAll}
                     />
                   </th>
-                  <th className="text-left p-3 text-foreground/70 font-semibold">Name</th>
-                  <th className="text-left p-3 text-foreground/70 font-semibold">Email</th>
-                  <th className="text-left p-3 text-foreground/70 font-semibold">Group</th>
-                  <th className="text-left p-3 text-foreground/70 font-semibold">Score</th>
-                  <th className="text-left p-3 text-foreground/70 font-semibold">Actions</th>
+                  <th className="text-left p-3 text-foreground/70 font-semibold">
+                    Name
+                  </th>
+                  <th className="text-left p-3 text-foreground/70 font-semibold">
+                    Email
+                  </th>
+                  <th className="text-left p-3 text-foreground/70 font-semibold">
+                    Group
+                  </th>
+                  <th className="text-left p-3 text-foreground/70 font-semibold">
+                    Score
+                  </th>
+                  <th className="text-left p-3 text-foreground/70 font-semibold">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredPlayers.map((player) => (
-                  <tr key={player.id} className="border-b border-primary/10 hover:bg-primary/5">
+                  <tr
+                    key={player.id}
+                    className="border-b border-primary/10 hover:bg-primary/5"
+                  >
                     <td className="p-3">
                       <Checkbox
                         checked={selectedPlayers.has(player.id)}
@@ -700,9 +863,13 @@ const AdminDashboardBulk = () => {
                       />
                     </td>
                     <td className="p-3 text-foreground">{player.full_name}</td>
-                    <td className="p-3 text-foreground/80 text-sm">{player.email}</td>
+                    <td className="p-3 text-foreground/80 text-sm">
+                      {player.email}
+                    </td>
                     <td className="p-3">
-                      <Badge variant="outline">{player.group_name || "N/A"}</Badge>
+                      <Badge variant="outline">
+                        {player.group_name || "N/A"}
+                      </Badge>
                     </td>
                     <td className="p-3 text-foreground font-semibold">
                       {player.score?.toFixed(2) || "0.00"}
@@ -774,20 +941,25 @@ const AdminDashboardBulk = () => {
               <DialogHeader>
                 <DialogTitle>Confirm Delete</DialogTitle>
                 <DialogDescription>
-                  Are you sure you want to delete {deleteConfirmation.player.full_name}?
-                  This action cannot be undone.
+                  Are you sure you want to delete{" "}
+                  {deleteConfirmation.player.full_name}? This action cannot be
+                  undone.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <Button
                   variant="outline"
-                  onClick={() => setDeleteConfirmation({ isOpen: false, player: null })}
+                  onClick={() =>
+                    setDeleteConfirmation({ isOpen: false, player: null })
+                  }
                 >
                   Cancel
                 </Button>
                 <Button
                   variant="destructive"
-                  onClick={() => handleDeletePlayer(deleteConfirmation.player!.id)}
+                  onClick={() =>
+                    handleDeletePlayer(deleteConfirmation.player!.id)
+                  }
                 >
                   Delete
                 </Button>
@@ -797,7 +969,10 @@ const AdminDashboardBulk = () => {
         )}
 
         {/* Bulk Confirmation Dialog */}
-        <Dialog open={showBulkConfirmation} onOpenChange={setShowBulkConfirmation}>
+        <Dialog
+          open={showBulkConfirmation}
+          onOpenChange={setShowBulkConfirmation}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Confirm Bulk Action</DialogTitle>
@@ -811,24 +986,44 @@ const AdminDashboardBulk = () => {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowBulkConfirmation(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowBulkConfirmation(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={confirmBulkAction} disabled={bulkOperationInProgress}>
+              <Button
+                onClick={confirmBulkAction}
+                disabled={bulkOperationInProgress}
+              >
                 {bulkOperationInProgress ? "Processing..." : "Confirm"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        <ImportPlayersModal
-          isOpen={isImportModalOpen}
-          onClose={() => setIsImportModalOpen(false)}
-          onImportComplete={fetchPlayers}
-        />
+        {isImportModalOpen && (
+          <ImportPlayersModal
+            isOpen={isImportModalOpen}
+            onClose={() => setIsImportModalOpen(false)}
+            onImportComplete={fetchPlayers}
+          />
+        )}
+
+        {isCreateModalOpen && (
+          <PlayerModal
+            isOpen={isCreateModalOpen}
+            onClose={() => setIsCreateModalOpen(false)}
+            onSave={handleCreatePlayer}
+            mode="create"
+          />
+        )}
 
         {isMessagesPanelOpen && (
-          <MessagesPanel isOpen={isMessagesPanelOpen} onClose={() => setIsMessagesPanelOpen(false)} />
+          <MessagesPanel
+            isOpen={isMessagesPanelOpen}
+            onClose={() => setIsMessagesPanelOpen(false)}
+          />
         )}
       </div>
     </div>
