@@ -199,7 +199,7 @@ const Leaderboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 overflow-hidden relative">
       <Navbar />
-      
+
       {/* Animated Background Shapes */}
       <FloatingShape color="purple" size={250} top="5%" left="80%" delay={0} />
       <FloatingShape
@@ -671,71 +671,78 @@ const Leaderboard = () => {
           )}
 
           {/* Message for unverified players - REMOVED as per requirement */}
-          
-          {user && currentUserData && currentUserData.verified_ofppt === true && (
-            <Card className="bg-red-500/10 backdrop-blur-sm border-red-500/30 mt-6">
-              <CardContent className="p-6">
-                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-foreground mb-3 text-center">
-                  {language === "en" 
-                    ? "⚠️ You Will Never Appear on the Leaderboard" 
-                    : "⚠️ Vous n'apparaîtrez jamais sur le classement"}
-                </h3>
-                <p className="text-foreground/90 mb-4 text-center font-medium">
-                  {language === "en"
-                    ? "Your account is not verified as an OFPPT student. To fix this:"
-                    : "Votre compte n'est pas vérifié en tant qu'étudiant OFPPT. Pour corriger ceci :"}
-                </p>
-                <div className="bg-card/50 rounded-lg p-4 mb-4 text-left space-y-3">
-                  <div className="flex items-start">
-                    <span className="font-bold text-primary mr-2">1.</span>
-                    <p className="text-foreground/80">
-                      {language === "en"
-                        ? "Click on your CSS Battle profile link below"
-                        : "Cliquez sur votre lien de profil CSS Battle ci-dessous"}
-                    </p>
+
+          {user &&
+            currentUserData &&
+            currentUserData.verified_ofppt === true && (
+              <Card className="bg-red-500/10 backdrop-blur-sm border-red-500/30 mt-6">
+                <CardContent className="p-6">
+                  <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-foreground mb-3 text-center">
+                    {language === "en"
+                      ? "⚠️ You Will Never Appear on the Leaderboard"
+                      : "⚠️ Vous n'apparaîtrez jamais sur le classement"}
+                  </h3>
+                  <p className="text-foreground/90 mb-4 text-center font-medium">
+                    {language === "en"
+                      ? "Your account is not verified as an OFPPT student. To fix this:"
+                      : "Votre compte n'est pas vérifié en tant qu'étudiant OFPPT. Pour corriger ceci :"}
+                  </p>
+                  <div className="bg-card/50 rounded-lg p-4 mb-4 text-left space-y-3">
+                    <div className="flex items-start">
+                      <span className="font-bold text-primary mr-2">1.</span>
+                      <p className="text-foreground/80">
+                        {language === "en"
+                          ? "Click on your CSS Battle profile link below"
+                          : "Cliquez sur votre lien de profil CSS Battle ci-dessous"}
+                      </p>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="font-bold text-primary mr-2">2.</span>
+                      <p className="text-foreground/80">
+                        {language === "en"
+                          ? "Click on 'Edit Profile' button"
+                          : "Cliquez sur le bouton 'Modifier le profil'"}
+                      </p>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="font-bold text-primary mr-2">3.</span>
+                      <p className="text-foreground/80">
+                        {language === "en"
+                          ? "In your bio section, write ONLY the word: "
+                          : "Dans la section bio, écrivez UNIQUEMENT le mot : "}
+                        <span className="font-bold text-primary">'ofppt'</span>
+                      </p>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="font-bold text-primary mr-2">4.</span>
+                      <p className="text-foreground/80">
+                        {language === "en"
+                          ? "Click 'Save' and wait 15 minutes to see the changes"
+                          : "Cliquez sur 'Enregistrer' et attendez 15 minutes pour voir les changements"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-start">
-                    <span className="font-bold text-primary mr-2">2.</span>
-                    <p className="text-foreground/80">
-                      {language === "en"
-                        ? "Click on 'Edit Profile' button"
-                        : "Cliquez sur le bouton 'Modifier le profil'"}
-                    </p>
-                  </div>
-                  <div className="flex items-start">
-                    <span className="font-bold text-primary mr-2">3.</span>
-                    <p className="text-foreground/80">
-                      {language === "en"
-                        ? "In your bio section, write ONLY the word: "
-                        : "Dans la section bio, écrivez UNIQUEMENT le mot : "}
-                      <span className="font-bold text-primary">'ofppt'</span>
-                    </p>
-                  </div>
-                  <div className="flex items-start">
-                    <span className="font-bold text-primary mr-2">4.</span>
-                    <p className="text-foreground/80">
-                      {language === "en"
-                        ? "Click 'Save' and wait 15 minutes to see the changes"
-                        : "Cliquez sur 'Enregistrer' et attendez 15 minutes pour voir les changements"}
-                    </p>
-                  </div>
-                </div>
-                {currentUserData.cssbattle_profile_link && (
-                  <div className="text-center">
-                    <Button
-                      onClick={() => window.open(currentUserData.cssbattle_profile_link!, "_blank")}
-                      className="bg-gradient-to-r from-primary to-accent hover:scale-105 transition-transform shadow-lg"
-                    >
-                      {language === "en" 
-                        ? "Go to CSS Battle Profile" 
-                        : "Aller au profil CSS Battle"}
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                  {currentUserData.cssbattle_profile_link && (
+                    <div className="text-center">
+                      <Button
+                        onClick={() =>
+                          window.open(
+                            currentUserData.cssbattle_profile_link!,
+                            "_blank"
+                          )
+                        }
+                        className="bg-gradient-to-r from-primary to-accent hover:scale-105 transition-transform shadow-lg"
+                      >
+                        {language === "en"
+                          ? "Go to CSS Battle Profile"
+                          : "Aller au profil CSS Battle"}
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
         </div>
       </main>
     </div>
