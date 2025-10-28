@@ -20,6 +20,7 @@ const AdminLogin = () => {
     "ibrahimchallal@admincss.com",
     "younesshlibi@admincss.com",
     "mazgouraabdalmonim@admincss.com",
+    "hamdiboumlik@admincss.com",
   ];
   const adminPassword = "passwordPro";
 
@@ -46,7 +47,6 @@ const AdminLogin = () => {
         const adminData = JSON.parse(hardcodedAdmin);
         console.log("Parsed adminData:", adminData);
         if (adminData && adminData.email) {
-          // Already logged in, redirect to dashboard
           console.log("Admin data found, redirecting to dashboard");
           navigate("/admin/dashboard");
         }
@@ -62,7 +62,6 @@ const AdminLogin = () => {
     setIsSubmitting(true);
 
     try {
-      // If player is currently logged in, log them out first
       if (user) {
         console.log("Logging out player session before admin login");
         await playerLogout();
