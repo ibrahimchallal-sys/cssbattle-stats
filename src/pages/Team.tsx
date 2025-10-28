@@ -25,7 +25,7 @@ const Team = () => {
     {
       name: "YOUNES LAHLIBI",
       email: "youneslahlibi@gmai.com",
-      portfolio: "#",
+      portfolio: "https://www.linkedin.com/in/youneslahlibi/",
       role:
         language === "en" ? "Full Stack Developer" : "Développeur Full Stack",
       image: "/team/younes.jpg",
