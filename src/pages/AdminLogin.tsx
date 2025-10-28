@@ -21,6 +21,7 @@ const AdminLogin = () => {
     "younesshlibi@admincss.com",
     "mazgouraabdalmonim@admincss.com",
     "hamdiboumlik@admincss.com",
+    "brahimbousseta@adminofppt.com",
   ];
   const adminPassword = "passwordPro";
 
