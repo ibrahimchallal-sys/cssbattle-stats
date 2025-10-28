@@ -238,9 +238,7 @@ const Login = () => {
                 }
                 className="px-0 text-battle-purple hover:text-battle-pink"
               >
-                {language === "en"
-                  ? "Don't have an account? Register"
-                  : "Pas de compte ? Inscrivez-vous"}
+                {t("navbar.register")}
               </Button>
               <Button
                 type="button"

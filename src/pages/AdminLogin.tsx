@@ -4,30 +4,53 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PasswordInput from "@/components/PasswordInput";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext"; // Add this import
+import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { ArrowLeft, Shield, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/contexts/AdminContext";
+import { safeLocalStorage } from "@/lib/storage";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAdmin, admin, logout: adminLogout } = useAdmin();
-  const { user, logout: playerLogout } = useAuth(); // Get player context and logout function
-  const adminEmails = [
-    "brahimbousseta@adminofppt.com",
-    "ibrahimchallal@admincss.com",
-    "younesshlibi@admincss.com",
-    "mazgouraabdalmonim@admincss.com",
-    "hamdiboumlik@admincss.com",
+  const { user, logout: playerLogout } = useAuth();
+
+  // Admin data with name, email, and password
+  const adminUsers = [
+    {
+      name: "Brahim Bousseta",
+      email: "brahimbousseta@adminofppt.com",
+      password: "passwordPro",
+    },
+    {
+      name: "Ibrahim Challal",
+      email: "ibrahimchallal@admincss.com",
+      password: "passwordChallal",
+    },
+    {
+      name: "Younes Hlibi",
+      email: "younesshlibi@admincss.com",
+      password: "passwordHlibi",
+    },
+    {
+      name: "Abd El Monim Mazgoura",
+      email: "mazgouraabdalmonim@admincss.com",
+      password: "passwordMazgoura",
+    },
+    {
+      name: "Hamdi Boumlik",
+      email: "hamdiboumlik@admincss.com",
+      password: "passwordPro",
+    },
   ];
-  const adminPassword = "passwordPro";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     console.log("AdminLogin - isAdmin:", isAdmin, "admin:", admin);
@@ -61,6 +84,7 @@ const AdminLogin = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
 
     try {
       if (user) {
@@ -74,11 +98,13 @@ const AdminLogin = () => {
       }
 
       // Check if email is in our admin list
-      if (!adminEmails.includes(email)) {
+      const validAdmin = adminUsers.find((admin) => admin.email === email);
+      if (!validAdmin) {
         throw new Error("Invalid admin email");
       }
 
-      if (password !== adminPassword) {
+      // Check if password matches the specific admin's password
+      if (password !== validAdmin.password) {
         throw new Error("Invalid password");
       }
 
@@ -108,36 +134,33 @@ const AdminLogin = () => {
       const adminData = {
         id: adminUserId,
         email: email,
-        email_confirmed_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
+        // Add other relevant admin data here if needed
       };
-      localStorage.setItem("hardcoded_admin", JSON.stringify(adminData));
 
-      // Manually dispatch storage event for the same tab
+      safeLocalStorage.setItem("hardcoded_admin", JSON.stringify(adminData));
+
+      // Dispatch storage event to notify AdminContext of the change
       window.dispatchEvent(
         new StorageEvent("storage", {
           key: "hardcoded_admin",
           newValue: JSON.stringify(adminData),
-          url: window.location.href,
+          storageArea: localStorage,
         })
       );
 
       toast({
         title: "Success",
-        description: foundRealAdmin
-          ? "Logged in successfully as admin"
-          : "Logged in successfully (limited functionality mode)",
+        description: "You have been logged in as admin successfully!",
       });
 
-      // Small delay to ensure context is updated before navigation
-      setTimeout(() => {
-        navigate("/admin/dashboard");
-      }, 100);
+      // Redirect to admin dashboard
+      navigate("/admin/dashboard");
     } catch (err) {
-      const error = err as Error;
+      const errorMessage = (err as Error).message || "Login failed";
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: error.message || "Login failed. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -146,65 +169,51 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4 sm:px-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 text-foreground hover:bg-battle-purple/10"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Home
-          </Button>
-          <h1 className="text-3xl font-bold text-center flex-1 text-foreground">
-            CSS{" "}
-            <span className="bg-gradient-primary bg-clip-text text-transparent">
-              BATTLE
-            </span>{" "}
-            Admin
-          </h1>
-          <div className="w-24"></div> {/* Spacer for alignment */}
-        </div>
-
-        <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 p-6 md:p-8 max-w-md mx-auto">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-full bg-gradient-primary flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-8 h-8 text-foreground" />
+    <div className="h-screen bg-background py-4 px-4 sm:px-6 flex items-center justify-center overflow-hidden">
+      <div className="max-w-md w-full">
+        <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 p-3">
+          <div className="flex items-center justify-between mb-3">
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/")}
+              className="flex items-center gap-2 text-foreground hover:bg-white h-8 px-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-sm">Back to Home</span>
+            </Button>
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-foreground" />
+              <h2 className="text-lg font-bold text-foreground">Admin Login</h2>
             </div>
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-              Admin Login
-            </h2>
-            <p className="text-foreground/80">Access the admin dashboard</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-foreground">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-3">
+              <Label htmlFor="email" className="text-foreground text-sm">
                 Admin Email
               </Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Mail className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                 <select
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-battle-purple/30 bg-background/50 px-3 py-2 pl-10 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="flex h-8 w-full rounded-md border border-battle-purple/30 bg-background/50 px-2.5 py-1 pl-8 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1"
                   required
-                  aria-label="Select admin email"
+                  aria-label="Select admin"
                 >
-                  <option value="">Select admin email...</option>
-                  {adminEmails.map((adminEmail) => (
-                    <option key={adminEmail} value={adminEmail}>
-                      {adminEmail}
+                  <option value="">Select an admin...</option>
+                  {adminUsers.map((admin) => (
+                    <option key={admin.email} value={admin.email}>
+                      {admin.name}
                     </option>
                   ))}
                 </select>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground">
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-foreground text-sm">
                 Password
               </Label>
               <PasswordInput
@@ -213,24 +222,30 @@ const AdminLogin = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter admin password"
-                className="bg-background/50 border-battle-purple/30"
+                className="bg-background/50 border-battle-purple/30 h-8 text-xs px-2.5 py-1"
                 required
               />
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            {error && (
+              <div className="text-red-500 text-xs text-center py-1">
+                {error}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1.5 pt-1">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate("/")}
-                className="flex-1 border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground"
+                className="border-battle-purple/50 hover:bg-battle-purple/10 hover:text-foreground h-8 text-xs"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 bg-gradient-primary hover:scale-105 transition-transform shadow-glow text-foreground"
+                className="bg-gradient-primary hover:scale-[1.02] transition-transform shadow-glow text-foreground h-8 text-xs"
               >
                 {isSubmitting ? "Logging in..." : "Login as Admin"}
               </Button>

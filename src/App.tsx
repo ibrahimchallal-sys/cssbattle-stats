@@ -18,11 +18,13 @@ import TestPlayerFetch from "./pages/TestPlayerFetch";
 import TestStorage from "./pages/TestStorage";
 import QuizScoreTest from "./pages/QuizScoreTest";
 import QuizDebug from "./pages/QuizDebug";
+import Team from "./pages/Team";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import PlayerProtectedRoute from "./components/PlayerProtectedRoute";
 import PlayerMessagesPanel from "./components/PlayerMessagesPanel";
 import MessagesPanel from "./components/MessagesPanel";
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AdminProvider } from "./contexts/AdminContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
@@ -43,7 +45,7 @@ const AppContent = () => {
   } = useMessagePanel();
 
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <Routes>
         {/* Public routes */}
         <Route
@@ -52,6 +54,7 @@ const AppContent = () => {
             <>
               <Navbar />
               <Index />
+              <Footer />
             </>
           }
         />
@@ -61,6 +64,7 @@ const AppContent = () => {
             <>
               <Navbar />
               <Register />
+              <Footer />
             </>
           }
         />
@@ -70,6 +74,7 @@ const AppContent = () => {
             <>
               <Navbar />
               <Login />
+              <Footer />
             </>
           }
         />
@@ -83,6 +88,7 @@ const AppContent = () => {
               <>
                 <Navbar />
                 <Profile />
+                <Footer />
               </>
             </PlayerProtectedRoute>
           }
@@ -95,6 +101,7 @@ const AppContent = () => {
             <>
               <Navbar />
               <Leaderboard />
+              <Footer />
             </>
           }
         />
@@ -104,6 +111,7 @@ const AppContent = () => {
             <>
               <Navbar />
               <LearningCenter />
+              <Footer />
             </>
           }
         />
@@ -117,6 +125,7 @@ const AppContent = () => {
               <>
                 <Navbar />
                 <AdminDashboard />
+                <Footer />
               </>
             </AdminProtectedRoute>
           }
@@ -128,6 +137,7 @@ const AppContent = () => {
               <>
                 <Navbar />
                 <AdminPlayerDetails />
+                <Footer />
               </>
             </AdminProtectedRoute>
           }
@@ -139,6 +149,7 @@ const AppContent = () => {
               <>
                 <Navbar />
                 <AdminQuizRecords />
+                <Footer />
               </>
             </AdminProtectedRoute>
           }
@@ -159,6 +170,7 @@ const AppContent = () => {
             <>
               <Navbar />
               <DatabaseTest />
+              <Footer />
             </>
           }
         />
@@ -168,6 +180,7 @@ const AppContent = () => {
             <>
               <Navbar />
               <DatabasePermissionsTest />
+              <Footer />
             </>
           }
         />
@@ -177,6 +190,7 @@ const AppContent = () => {
             <>
               <Navbar />
               <TestPlayerFetch />
+              <Footer />
             </>
           }
         />
@@ -187,6 +201,7 @@ const AppContent = () => {
               <>
                 <Navbar />
                 <TestStorage />
+                <Footer />
               </>
             </AdminProtectedRoute>
           }
@@ -197,6 +212,7 @@ const AppContent = () => {
             <>
               <Navbar />
               <QuizScoreTest />
+              <Footer />
             </>
           }
         />
@@ -206,6 +222,7 @@ const AppContent = () => {
             <>
               <Navbar />
               <QuizDebug />
+              <Footer />
             </>
           }
         />
@@ -215,6 +232,16 @@ const AppContent = () => {
             <>
               <Navbar />
               <TestVideoCompletion />
+              <Footer />
+            </>
+          }
+        />
+        <Route
+          path="/team"
+          element={
+            <>
+              <Team />
+              <Footer />
             </>
           }
         />
@@ -236,7 +263,7 @@ const AppContent = () => {
           onClose={closeAdminMessages}
         />
       )}
-    </>
+    </div>
   );
 };
 

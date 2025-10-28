@@ -106,13 +106,15 @@ const Navbar = () => {
   const getPlayerNavLinks = () => [
     { name: t("navbar.home"), href: "/" },
     { name: t("navbar.leaderboard"), href: "/leaderboard" },
-    { name: t("navbar.learning"), href: "/learning" }, // Added Learning Center link
+    { name: t("navbar.learning"), href: "/learning" },
+    { name: language === "en" ? "Our Team" : "Notre Équipe", href: "/team" }, // Added Team link
   ];
 
   const getAdminNavLinks = () => [
     { name: t("navbar.home"), href: "/" },
     { name: t("navbar.leaderboard"), href: "/leaderboard" },
-    { name: t("navbar.learning"), href: "/learning" }, // Added Learning Center link
+    { name: t("navbar.learning"), href: "/learning" },
+    { name: language === "en" ? "Our Team" : "Notre Équipe", href: "/team" }, // Added Team link
   ];
 
   const navLinks = isAdmin
@@ -122,6 +124,10 @@ const Navbar = () => {
     : [
         { name: t("navbar.home"), href: "/" },
         { name: t("navbar.leaderboard"), href: "/leaderboard" },
+        {
+          name: language === "en" ? "Our Team" : "Notre Équipe",
+          href: "/team",
+        }, // Added Team link for unauthenticated users too
       ];
 
   return (
@@ -705,17 +711,6 @@ const Navbar = () => {
                     >
                       {t("navbar.login")}
                     </Button>
-                    <Button
-                      onClick={() =>
-                        window.open(
-                          "https://css-battle-isfo.vercel.app/",
-                          "_blank"
-                        )
-                      }
-                      className="bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
-                    >
-                      {t("navbar.register")}
-                    </Button>
                   </>
                 )
               )}
@@ -756,18 +751,7 @@ const Navbar = () => {
                     >
                       {t("navbar.login")}
                     </Button>
-                    <Button
-                      onClick={() => {
-                        window.open(
-                          "https://css-battle-isfo.vercel.app/",
-                          "_blank"
-                        );
-                        setIsMenuOpen(false);
-                      }}
-                      className="w-full bg-gradient-primary hover:scale-105 transition-transform shadow-glow"
-                    >
-                      {t("navbar.register")}
-                    </Button>
+                    {/* Removed mobile register button as requested */}
                   </>
                 )}
               </div>

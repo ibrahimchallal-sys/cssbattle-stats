@@ -57,12 +57,20 @@ const Leaderboard = () => {
   const fetchPlayers = async () => {
     setLoading(true);
     try {
-      // Get all players with required fields for leaderboard
-      const { data, error } = await supabase
+      // Start building the query
+      let query = supabase
         .from("players")
         .select(
           "id, full_name, score, group_name, email, cssbattle_profile_link, phone, created_at, video_completed, verified_ofppt, profile_image_url"
         );
+
+      // Apply group filter if not "all"
+      if (groupFilter !== "all") {
+        query = query.eq("group_name", groupFilter);
+      }
+
+      // Get all players with required fields for leaderboard
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -390,237 +398,109 @@ const Leaderboard = () => {
             </div>
           ) : (
             <>
-              {/* Compact Top 3 Design with Creative Podium Formation on Mobile */}
-              <div className="relative mb-6">
-                {/* Grid formation for desktop */}
-                <div className="hidden md:grid md:grid-cols-3 md:gap-3">
-                  {/* Second Place */}
-                  {topThreePlayers[1] && (
-                    <div className="bg-card border border-gray-400/30 rounded-lg p-3 text-center transition-all duration-300 hover:shadow-lg">
-                      <div className="flex justify-center mb-2">
-                        {topThreePlayers[1].profile_image_url ? (
-                          <img
-                            src={topThreePlayers[1].profile_image_url}
-                            alt={topThreePlayers[1].full_name}
-                            className="w-12 h-12 rounded-full object-cover border-2 border-gray-400"
-                          />
-                        ) : (
-                          <div className="bg-gray-400/20 rounded-full p-2">
-                            {getRankIcon(1)}
-                          </div>
-                        )}
-                      </div>
-                      <h3 className="font-bold text-sm text-gray-400 truncate px-1">
-                        {topThreePlayers[1].full_name}
-                      </h3>
-                      <div className="mt-2">
-                        <Badge
-                          className={`${getGroupColor(
-                            topThreePlayers[1].group_name || ""
-                          )} py-0 px-2 text-xs`}
+              {/* Unified Top Players Display */}
+              <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Users className="w-5 h-5 mr-2 text-battle-purple" />
+                    {language === "en" ? "Top Players" : "Meilleurs Joueurs"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="divide-y divide-border">
+                    {topThreePlayers.map((player, index) => {
+                      const isCurrentUser = user && player.email === user.email;
+                      const rank = index + 1;
+                      return (
+                        <div
+                          key={player.id}
+                          className={`p-4 transition-all duration-300 hover:bg-card/80 ${
+                            isCurrentUser
+                              ? "bg-primary/5 border-l-2 border-primary"
+                              : ""
+                          } ${
+                            rank === 1
+                              ? "bg-yellow-500/5 border-l-2 border-yellow-500"
+                              : rank === 2
+                              ? "bg-gray-400/5 border-l-2 border-gray-400"
+                              : "bg-amber-700/5 border-l-2 border-amber-700"
+                          }`}
                         >
-                          {topThreePlayers[1].score?.toLocaleString() || "0"}
-                        </Badge>
-                      </div>
-                      <div className="mt-2 text-2xl font-bold text-gray-400">
-                        2
-                      </div>
-                    </div>
-                  )}
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center">
+                              {player.profile_image_url ? (
+                                <div className="relative">
+                                  <img
+                                    src={player.profile_image_url}
+                                    alt={player.full_name}
+                                    className="w-10 h-10 rounded-full object-cover border-2 border-primary/30"
+                                  />
+                                  <div className="absolute -bottom-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold bg-primary text-white">
+                                    {rank}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div
+                                  className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold border ${getRankBadge(
+                                    rank
+                                  )}`}
+                                >
+                                  {rank}
+                                </div>
+                              )}
+                            </div>
 
-                  {/* First Place */}
-                  {topThreePlayers[0] && (
-                    <div className="bg-card border-2 border-yellow-500/50 rounded-lg p-4 text-center transition-all duration-300 hover:shadow-lg shadow-lg shadow-yellow-500/20 -mt-2">
-                      <div className="flex justify-center mb-2">
-                        {topThreePlayers[0].profile_image_url ? (
-                          <img
-                            src={topThreePlayers[0].profile_image_url}
-                            alt={topThreePlayers[0].full_name}
-                            className="w-16 h-16 rounded-full object-cover border-2 border-yellow-500"
-                          />
-                        ) : (
-                          <div className="bg-yellow-500/20 rounded-full p-2">
-                            {getRankIcon(0)}
-                          </div>
-                        )}
-                      </div>
-                      <h3 className="font-bold text-base text-yellow-500 truncate px-1">
-                        {topThreePlayers[0].full_name}
-                      </h3>
-                      <div className="mt-2">
-                        <Badge
-                          className={`${getGroupColor(
-                            topThreePlayers[0].group_name || ""
-                          )} py-0 px-2 text-xs font-bold`}
-                        >
-                          {topThreePlayers[0].score?.toLocaleString() || "0"}
-                        </Badge>
-                      </div>
-                      <div className="mt-2 text-3xl font-bold text-yellow-500">
-                        1
-                      </div>
-                    </div>
-                  )}
+                            <div className="flex-1 min-w-0">
+                              <h3
+                                className={`font-medium ${
+                                  isCurrentUser ? "text-primary" : ""
+                                }`}
+                              >
+                                {player.full_name}
+                                {isCurrentUser && (
+                                  <span className="ml-2 text-xs bg-primary/20 px-1.5 py-0.5 rounded">
+                                    {language === "en" ? "You" : "Vous"}
+                                  </span>
+                                )}
+                              </h3>
+                              <Badge
+                                className={`${getGroupColor(
+                                  player.group_name || ""
+                                )} py-0 px-1.5 text-xs mt-1`}
+                              >
+                                {player.group_name}
+                              </Badge>
+                            </div>
 
-                  {/* Third Place */}
-                  {topThreePlayers[2] && (
-                    <div className="bg-card border border-amber-700/30 rounded-lg p-3 text-center transition-all duration-300 hover:shadow-lg">
-                      <div className="flex justify-center mb-2">
-                        {topThreePlayers[2].profile_image_url ? (
-                          <img
-                            src={topThreePlayers[2].profile_image_url}
-                            alt={topThreePlayers[2].full_name}
-                            className="w-12 h-12 rounded-full object-cover border-2 border-amber-700"
-                          />
-                        ) : (
-                          <div className="bg-amber-700/20 rounded-full p-2">
-                            {getRankIcon(2)}
-                          </div>
-                        )}
-                      </div>
-                      <h3 className="font-bold text-sm text-amber-700 truncate px-1">
-                        {topThreePlayers[2].full_name}
-                      </h3>
-                      <div className="mt-2">
-                        <Badge
-                          className={`${getGroupColor(
-                            topThreePlayers[2].group_name || ""
-                          )} py-0 px-2 text-xs`}
-                        >
-                          {topThreePlayers[2].score?.toLocaleString() || "0"}
-                        </Badge>
-                      </div>
-                      <div className="mt-2 text-2xl font-bold text-amber-700">
-                        3
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Creative Podium formation for mobile */}
-                <div className="md:hidden flex justify-center items-end h-48 space-x-2 px-4">
-                  {/* Second Place - Silver Podium */}
-                  {topThreePlayers[1] && (
-                    <div className="flex flex-col items-center w-24">
-                      <div className="bg-card border border-gray-400/30 rounded-t-lg p-3 text-center transition-all duration-300 hover:shadow-lg flex-1 flex flex-col justify-between w-full">
-                        <div>
-                          <div className="flex justify-center mb-1">
-                            {topThreePlayers[1].profile_image_url ? (
-                              <img
-                                src={topThreePlayers[1].profile_image_url}
-                                alt={topThreePlayers[1].full_name}
-                                className="w-10 h-10 rounded-full object-cover border-2 border-gray-400"
-                              />
-                            ) : (
-                              <div className="bg-gray-400/20 rounded-full p-1">
-                                {getRankIcon(1)}
+                            <div className="text-right">
+                              <div className="text-xs text-muted-foreground">
+                                {language === "en" ? "Score" : "Score"}
                               </div>
-                            )}
-                          </div>
-                          <h3 className="font-bold text-xs text-gray-400 truncate">
-                            {topThreePlayers[1].full_name}
-                          </h3>
-                        </div>
-                        <div className="mt-2">
-                          <Badge
-                            className={`${getGroupColor(
-                              topThreePlayers[1].group_name || ""
-                            )} py-0 px-1 text-xs whitespace-nowrap`}
-                          >
-                            {topThreePlayers[1].score?.toLocaleString() || "0"}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="bg-gray-400 text-white text-xs font-bold py-1 px-2 rounded-b-lg w-full text-center">
-                        2nd
-                      </div>
-                    </div>
-                  )}
-
-                  {/* First Place - Gold Podium (Tallest) */}
-                  {topThreePlayers[0] && (
-                    <div className="flex flex-col items-center w-28">
-                      <div className="bg-card border-2 border-yellow-500/50 rounded-t-lg p-4 text-center transition-all duration-300 hover:shadow-lg shadow-lg shadow-yellow-500/20 flex-1 flex flex-col justify-between w-full">
-                        <div>
-                          <div className="flex justify-center mb-1">
-                            {topThreePlayers[0].profile_image_url ? (
-                              <img
-                                src={topThreePlayers[0].profile_image_url}
-                                alt={topThreePlayers[0].full_name}
-                                className="w-12 h-12 rounded-full object-cover border-2 border-yellow-500"
-                              />
-                            ) : (
-                              <div className="bg-yellow-500/20 rounded-full p-1">
-                                {getRankIcon(0)}
+                              <div
+                                className={`font-bold ${
+                                  isCurrentUser ? "text-primary" : ""
+                                }`}
+                              >
+                                {player.score !== null &&
+                                player.score !== undefined
+                                  ? player.score.toLocaleString()
+                                  : "0"}
                               </div>
-                            )}
+                            </div>
                           </div>
-                          <h3 className="font-bold text-sm text-yellow-500 truncate">
-                            {topThreePlayers[0].full_name}
-                          </h3>
                         </div>
-                        <div className="mt-2">
-                          <Badge
-                            className={`${getGroupColor(
-                              topThreePlayers[0].group_name || ""
-                            )} py-0 px-1 text-xs font-bold whitespace-nowrap`}
-                          >
-                            {topThreePlayers[0].score?.toLocaleString() || "0"}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="bg-yellow-500 text-white text-xs font-bold py-1 px-2 rounded-b-lg w-full text-center">
-                        1st
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Third Place - Bronze Podium */}
-                  {topThreePlayers[2] && (
-                    <div className="flex flex-col items-center w-20">
-                      <div className="bg-card border border-amber-700/30 rounded-t-lg p-2 text-center transition-all duration-300 hover:shadow-lg flex-1 flex flex-col justify-between w-full">
-                        <div>
-                          <div className="flex justify-center mb-1">
-                            {topThreePlayers[2].profile_image_url ? (
-                              <img
-                                src={topThreePlayers[2].profile_image_url}
-                                alt={topThreePlayers[2].full_name}
-                                className="w-8 h-8 rounded-full object-cover border-2 border-amber-700"
-                              />
-                            ) : (
-                              <div className="bg-amber-700/20 rounded-full p-1">
-                                {getRankIcon(2)}
-                              </div>
-                            )}
-                          </div>
-                          <h3 className="font-bold text-xs text-amber-700 truncate">
-                            {topThreePlayers[2].full_name}
-                          </h3>
-                        </div>
-                        <div className="mt-1">
-                          <Badge
-                            className={`${getGroupColor(
-                              topThreePlayers[2].group_name || ""
-                            )} py-0 px-1 text-xs whitespace-nowrap`}
-                          >
-                            {topThreePlayers[2].score?.toLocaleString() || "0"}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="bg-amber-700 text-white text-xs font-bold py-1 px-2 rounded-b-lg w-full text-center">
-                        3rd
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Positions 4-10 in a compact table */}
               <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 mb-6">
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <Users className="w-5 h-5 mr-2 text-battle-purple" />
-                    {language === "en" ? "Top Players" : "Meilleurs Joueurs"}
+                    {language === "en" ? "Other Players" : "Autres Joueurs"}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -638,21 +518,28 @@ const Leaderboard = () => {
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            {player.profile_image_url ? (
-                              <img
-                                src={player.profile_image_url}
-                                alt={player.full_name}
-                                className="w-10 h-10 rounded-full object-cover border-2 border-primary/30"
-                              />
-                            ) : (
-                              <div
-                                className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold border ${getRankBadge(
-                                  actualIndex
-                                )}`}
-                              >
-                                {actualIndex + 1}
-                              </div>
-                            )}
+                            <div className="flex items-center">
+                              {player.profile_image_url ? (
+                                <div className="relative">
+                                  <img
+                                    src={player.profile_image_url}
+                                    alt={player.full_name}
+                                    className="w-10 h-10 rounded-full object-cover border-2 border-primary/30"
+                                  />
+                                  <div className="absolute -bottom-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold bg-primary text-white">
+                                    {actualIndex + 1}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div
+                                  className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold border ${getRankBadge(
+                                    actualIndex
+                                  )}`}
+                                >
+                                  {actualIndex + 1}
+                                </div>
+                              )}
+                            </div>
 
                             <div className="flex-1 min-w-0">
                               <h3
@@ -677,6 +564,9 @@ const Leaderboard = () => {
                             </div>
 
                             <div className="text-right">
+                              <div className="text-xs text-muted-foreground">
+                                {language === "en" ? "Score" : "Score"}
+                              </div>
                               <div
                                 className={`font-bold ${
                                   isCurrentUser ? "text-primary" : ""
@@ -715,20 +605,27 @@ const Leaderboard = () => {
                   </CardHeader>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
-                      {currentUserData.profile_image_url ? (
-                        <img
-                          src={currentUserData.profile_image_url}
-                          alt={currentUserData.full_name}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-primary"
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/20 font-bold text-primary border border-primary/30">
-                          #{userRank}
-                        </div>
-                      )}
+                      <div className="flex items-center">
+                        {currentUserData.profile_image_url ? (
+                          <div className="relative">
+                            <img
+                              src={currentUserData.profile_image_url}
+                              alt={currentUserData.full_name}
+                              className="w-12 h-12 rounded-full object-cover border-2 border-primary"
+                            />
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold bg-primary text-white">
+                              {userRank}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/20 font-bold text-primary border border-primary/30">
+                            #{userRank}
+                          </div>
+                        )}
+                      </div>
 
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-primary truncate">
+                        <h3 className="font-bold text-primary">
                           {currentUserData.full_name}
                           <span className="ml-2 text-xs bg-primary/20 px-2 py-1 rounded">
                             {language === "en" ? "You" : "Vous"}
@@ -744,14 +641,14 @@ const Leaderboard = () => {
                       </div>
 
                       <div className="text-right">
+                        <div className="text-xs text-muted-foreground">
+                          {language === "en" ? "Score" : "Score"}
+                        </div>
                         <div className="text-xl font-bold text-primary">
                           {currentUserData.score !== null &&
                           currentUserData.score !== undefined
                             ? currentUserData.score.toLocaleString()
                             : "0"}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {language === "en" ? "Rank" : "Rang"} #{userRank}
                         </div>
                       </div>
                     </div>

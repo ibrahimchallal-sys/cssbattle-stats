@@ -15,6 +15,12 @@ const Index = () => {
   const { t, language } = useLanguage();
   const [playerCount, setPlayerCount] = useState<number | null>(null);
   const [daysLeftInMonth, setDaysLeftInMonth] = useState<number>(0);
+  const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
 
   const codeExample = [
     ".battle {",
@@ -32,6 +38,33 @@ const Index = () => {
     }, 100);
 
     return () => clearTimeout(timer);
+  }, []);
+
+  // Add effect for the live countdown timer
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const difference = endOfMonth.getTime() - now.getTime();
+
+      if (difference > 0) {
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+        const hours = Math.floor(
+          (difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+        );
+        const minutes = Math.floor(
+          (difference % (1000 * 60 * 60)) / (1000 * 60)
+        );
+        const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+        setTimeLeft({ days, hours, minutes, seconds });
+      }
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+
+    return () => clearInterval(timer);
   }, []);
 
   const fetchPlayerCount = async () => {
@@ -60,6 +93,7 @@ const Index = () => {
   return (
     <main className="min-h-screen bg-background overflow-hidden relative font-heading">
       <Navbar />
+
       {/* Animated Background Shapes */}
       <div className="hidden sm:block">
         <FloatingShape
@@ -94,37 +128,123 @@ const Index = () => {
       </div>
 
       {/* Hero Section */}
-      <section className="relative z-10 container mx-auto px-4 py-24 md:py-32">
-        <div className="text-center">
-          {/* Event Tag */}
-          <div className="inline-flex items-center gap-2 bg-gradient-primary text-foreground px-4 py-2 rounded-full mb-6 md:mb-8 shadow-glow">
-            <Zap className="w-4 h-4" />
-            <span className="text-sm font-semibold uppercase tracking-wider">
-              {language === "en" ? "Live Competition" : "Compétition en Direct"}
-            </span>
+      <section className="relative z-10 container mx-auto px-4 py-12 md:py-16">
+        <div className="flex flex-col lg:flex-row gap-6 items-center">
+          {/* Left Column - Title and Motivation Message */}
+          <div className="flex-1">
+            {/* Event Tag */}
+            <div className="inline-flex items-center gap-2 bg-gradient-primary text-foreground px-3 py-1.5 rounded-full mb-4 md:mb-6 shadow-glow">
+              <Zap className="w-3 h-3" />
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                {language === "en"
+                  ? "Live Competition"
+                  : "Compétition en Direct"}
+              </span>
+            </div>
+
+            {/* Main Title */}
+            <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold mb-4 md:mb-6 leading-tight">
+              <span className="block text-foreground">CSS</span>
+              <span className="block bg-gradient-primary bg-clip-text text-transparent">
+                BATTLE
+              </span>
+              <span className="block text-battle-accent">
+                {language === "en" ? "CHAMPIONSHIP" : "CHAMPIONNAT"}
+              </span>
+            </h1>
+
+            {/* Motivation Message */}
+            <div className="bg-gradient-to-r from-battle-purple/20 to-indigo-600/20 backdrop-blur-sm rounded-xl p-4 mb-6 border border-battle-purple/30">
+              <p className="text-base md:text-lg text-foreground/90 italic">
+                {language === "en"
+                  ? "Push your CSS skills to the limit. Compete with the best developers worldwide."
+                  : "Poussez vos compétences CSS à l'extrême. Affrontez les meilleurs développeurs du monde entier."}
+              </p>
+            </div>
           </div>
 
-          {/* Main Title */}
-          <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold mb-6 md:mb-8 leading-tight">
-            <span className="block text-foreground">CSS</span>
-            <span className="block bg-gradient-primary bg-clip-text text-transparent">
-              BATTLE
-            </span>
-            <span className="block text-battle-accent">
-              {language === "en" ? "CHAMPIONSHIP" : "CHAMPIONNAT"}
-            </span>
-          </h1>
+          {/* Right Column - Countdown Timer and Buttons */}
+          <div className="flex-1 flex flex-col items-center justify-center">
+            {/* Creative Countdown Timer */}
+            <div className="bg-gradient-to-r from-battle-purple to-indigo-600 rounded-xl p-4 shadow-xl border-2 border-battle-purple/50 w-full max-w-xs mb-6">
+              <div className="text-center">
+                <h3 className="text-sm font-bold text-foreground mb-3">
+                  {language === "en" ? "Time Remaining" : "Temps Restant"}
+                </h3>
+                <div className="flex justify-center space-x-2">
+                  <div className="flex flex-col items-center">
+                    <div className="bg-background/90 backdrop-blur-sm rounded-lg w-12 h-12 flex items-center justify-center shadow-md">
+                      <span className="text-lg font-bold text-battle-purple">
+                        {timeLeft.days.toString().padStart(2, "0")}
+                      </span>
+                    </div>
+                    <span className="text-xs mt-1 text-foreground/90 font-medium">
+                      {language === "en" ? "DAYS" : "JRS"}
+                    </span>
+                  </div>
 
-          {/* Subtitle */}
-          <p className="text-lg md:text-xl lg:text-2xl text-foreground/80 mb-8 md:mb-12 max-w-3xl mx-auto">
-            {language === "en"
-              ? "Compete with other players. Write the cleanest code. Claim victory."
-              : "Affrontez des autres joueurs. Écrivez le code le plus propre. Remportez la victoire."}
-          </p>
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="bg-background/90 backdrop-blur-sm rounded-lg w-12 h-12 flex items-center justify-center shadow-md">
+                      <span className="text-lg font-bold text-battle-purple">
+                        {timeLeft.hours.toString().padStart(2, "0")}
+                      </span>
+                    </div>
+                    <span className="text-xs mt-1 text-foreground/90 font-medium">
+                      {language === "en" ? "HRS" : "HRS"}
+                    </span>
+                  </div>
 
-          {/* Code Example */}
-          <div className="max-w-2xl mx-auto mb-12 md:mb-16">
-            <CodeBlock lines={codeExample} className="animate-float" />
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="bg-background/90 backdrop-blur-sm rounded-lg w-12 h-12 flex items-center justify-center shadow-md">
+                      <span className="text-lg font-bold text-battle-purple">
+                        {timeLeft.minutes.toString().padStart(2, "0")}
+                      </span>
+                    </div>
+                    <span className="text-xs mt-1 text-foreground/90 font-medium">
+                      {language === "en" ? "MIN" : "MIN"}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="bg-background/90 backdrop-blur-sm rounded-lg w-12 h-12 flex items-center justify-center shadow-md">
+                      <span className="text-lg font-bold text-battle-purple">
+                        {timeLeft.seconds.toString().padStart(2, "0")}
+                      </span>
+                    </div>
+                    <span className="text-xs mt-1 text-foreground/90 font-medium">
+                      {language === "en" ? "SEC" : "SEC"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
+              {/* Register Button - Only show when not logged in */}
+              {!user && !isAdmin && (
+                <button
+                  onClick={() =>
+                    window.open("https://css-battle-isfo.vercel.app/", "_blank")
+                  }
+                  className="flex-1 bg-gradient-primary hover:scale-105 transition-transform shadow-glow px-4 py-2 rounded-lg font-semibold text-foreground text-sm"
+                >
+                  {t("navbar.register")}
+                </button>
+              )}
+
+              {/* Daily Challenge Button */}
+              <a
+                href="https://cssbattle.dev/daily"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center bg-gradient-primary text-foreground px-4 py-2 rounded-lg font-semibold hover:scale-105 transition-transform shadow-glow text-sm"
+              >
+                {language === "en"
+                  ? "View Today's Challenge"
+                  : "Voir Défi du Jour"}
+              </a>
+            </div>
           </div>
         </div>
       </section>
@@ -151,73 +271,49 @@ const Index = () => {
             </div>
           </Card>
 
-          <Card className="bg-card/50 backdrop-blur-sm border-battle-purple/30 p-4 md:p-6 hover:scale-105 transition-transform hover:shadow-glow">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-3 shadow-glow">
-                <Trophy className="w-5 h-5 md:w-6 md:h-6 text-foreground" />
+          {/* Event Information Card */}
+          <Card className="bg-gradient-primary p-4 md:p-6 text-center shadow-glow flex flex-col justify-between h-full">
+            <div className="flex flex-wrap gap-2 justify-center text-sm">
+              <div className="bg-background/20 backdrop-blur-sm px-2 md:px-3 py-1 rounded-lg">
+                <span className="text-white">
+                  {language === "en" ? "Online Event" : "Événement en Ligne"}
+                </span>
               </div>
-              <h3 className="text-lg md:text-xl font-bold mb-1 text-foreground">
-                {language === "en" ? "Daily Challenge" : "Défi Quotidien"}
-              </h3>
-              <p className="text-sm text-foreground/70 mb-3">
-                {language === "en"
-                  ? "Test your skills"
-                  : "Testez vos compétences"}
-              </p>
-              <a
-                href="https://cssbattle.dev/daily"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center bg-gradient-primary text-foreground px-4 py-2 rounded-lg text-sm font-semibold hover:scale-105 transition-transform shadow-glow"
-              >
-                {language === "en" ? "Take Challenge" : "Relever le Défi"}
-              </a>
+              <div className="bg-background/20 backdrop-blur-sm px-2 md:px-3 py-1 rounded-lg">
+                <span className="text-white">
+                  {language === "en"
+                    ? "All Skill Levels"
+                    : "Tous Niveaux de Compétence"}
+                </span>
+              </div>
+              <div className="bg-background/20 backdrop-blur-sm px-2 md:px-3 py-1 rounded-lg">
+                <span className="text-white">
+                  {language === "en"
+                    ? "Live Leaderboard"
+                    : "Classement en Direct"}
+                </span>
+              </div>
             </div>
+
+            {/* Monthly Counter Card */}
+            <Card className="mt-4 bg-background/30 backdrop-blur-sm border-foreground/20 p-4">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <Calendar className="w-4 h-4 text-foreground" />
+                <h3 className="text-sm md:text-base font-bold text-foreground">
+                  {language === "en"
+                    ? "Days Left This Month"
+                    : "Jours Restants Ce Mois"}
+                </h3>
+              </div>
+              <p className="text-xl md:text-2xl font-bold text-white">
+                {daysLeftInMonth}
+              </p>
+            </Card>
           </Card>
         </div>
       </section>
 
-      {/* Event Details */}
-      <section className="relative z-10 container mx-auto px-4 pb-12 md:pb-20">
-        <Card className="bg-gradient-primary p-6 md:p-8 text-center shadow-glow max-w-3xl mx-auto">
-          <div className="flex flex-wrap gap-3 justify-center text-sm md:text-base">
-            <div className="bg-background/20 backdrop-blur-sm px-3 md:px-5 py-1.5 md:py-2 rounded-lg">
-              <span className="text-foreground/80">
-                {language === "en" ? "Online Event" : "Événement en Ligne"}
-              </span>
-            </div>
-            <div className="bg-background/20 backdrop-blur-sm px-3 md:px-5 py-1.5 md:py-2 rounded-lg">
-              <span className="text-foreground/80">
-                {language === "en"
-                  ? "All Skill Levels"
-                  : "Tous Niveaux de Compétence"}
-              </span>
-            </div>
-            <div className="bg-background/20 backdrop-blur-sm px-3 md:px-5 py-1.5 md:py-2 rounded-lg">
-              <span className="text-foreground/80">
-                {language === "en"
-                  ? "Live Leaderboard"
-                  : "Classement en Direct"}
-              </span>
-            </div>
-          </div>
-
-          {/* Monthly Counter Card */}
-          <Card className="mt-8 bg-background/30 backdrop-blur-sm border-foreground/20 p-6 max-w-md mx-auto">
-            <div className="flex items-center justify-center gap-3 mb-2">
-              <Calendar className="w-5 h-5 text-foreground" />
-              <h3 className="text-lg md:text-xl font-bold text-foreground">
-                {language === "en"
-                  ? "Days Left This Month"
-                  : "Jours Restants Ce Mois"}
-              </h3>
-            </div>
-            <p className="text-2xl md:text-3xl font-bold text-battle-accent">
-              {daysLeftInMonth}
-            </p>
-          </Card>
-        </Card>
-      </section>
+      {/* Removed the separate Event Details section since it's now integrated above */}
     </main>
   );
 };
