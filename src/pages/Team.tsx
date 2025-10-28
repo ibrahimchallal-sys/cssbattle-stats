@@ -24,7 +24,7 @@ const Team = () => {
     },
     {
       name: "YOUNES LAHLIBI",
-      email: "younes.lahlibi@example.com",
+      email: "youneslahlibi@gmai.com",
       portfolio: "#",
       role:
         language === "en" ? "Full Stack Developer" : "Développeur Full Stack",
