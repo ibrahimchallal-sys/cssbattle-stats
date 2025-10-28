@@ -16,8 +16,8 @@ const Team = () => {
     },
     {
       name: "IBRAHIM CHALLAL",
-      email: "ibrahim.challal@example.com",
-      portfolio: "#",
+      email: "i.challal9970@gmail.com",
+      portfolio: "https://portfolio-challal.vercel.app",
       role:
         language === "en" ? "Full Stack Developer" : "Développeur Full Stack",
       image: "/team/ibrahim.jpg",
