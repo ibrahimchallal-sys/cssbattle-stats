@@ -17,11 +17,11 @@ const AdminLogin = () => {
   const { isAdmin, admin, logout: adminLogout } = useAdmin();
   const { user, logout: playerLogout } = useAuth(); // Get player context and logout function
   const adminEmails = [
+    "brahimbousseta@adminofppt.com",
     "ibrahimchallal@admincss.com",
     "younesshlibi@admincss.com",
     "mazgouraabdalmonim@admincss.com",
     "hamdiboumlik@admincss.com",
-    "brahimbousseta@adminofppt.com",
   ];
   const adminPassword = "passwordPro";
 
